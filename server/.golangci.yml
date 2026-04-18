@@ -1,0 +1,24 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - misspell
+
+formatters:
+  default: none
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  exclude-rules:
+    - path: "_test\\.go"
+      linters:
+        - staticcheck
+  max-issues-per-linter: 50
+  max-same-issues: 5

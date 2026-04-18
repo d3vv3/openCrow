@@ -1,0 +1,135 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+
+@theme {
+  /* ─── Surface tokens: Dark ─── */
+  --color-surface: #111417;
+  --color-surface-lowest: #0b0e11;
+  --color-surface-low: #191c1f;
+  --color-surface-mid: #202327;
+  --color-surface-high: #272a2e;
+  --color-surface-highest: #323538;
+
+  --color-on-surface: #ecf2ff;
+  --color-on-surface-variant: #9ea8c3;
+  --color-outline-ghost: rgba(142, 160, 198, 0.15);
+
+  /* ─── Brand accents ─── */
+  --color-violet: #8B5CF6;
+  --color-violet-light: #d0bcff;
+  --color-violet-dim: #6d28d9;
+  --color-cyan: #22D3EE;
+  --color-cyan-dim: #0891b2;
+  --color-action-blue: #2962ff;
+  --color-action-blue-deep: #0049db;
+
+  /* ─── Status ─── */
+  --color-success: #2dd4bf;
+  --color-warning: #f59e0b;
+  --color-error: #f43f5e;
+
+  /* ─── Typography ─── */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ─── Radius ─── */
+  --radius-sm: 2px;
+  --radius-DEFAULT: 4px;
+
+  /* ─── Shadows ─── */
+  --shadow-ambient: 0 0 64px rgba(236, 242, 255, 0.04);
+  --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Light theme override ─── */
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-surface: #f8f9fa;
+    --color-surface-lowest: #ffffff;
+    --color-surface-low: #f3f4f5;
+    --color-surface-mid: #edeeef;
+    --color-surface-high: #e7e8e9;
+    --color-surface-highest: #dfe1e3;
+    --color-on-surface: #191c1d;
+    --color-on-surface-variant: #434656;
+    --color-outline-ghost: rgba(130, 135, 160, 0.35);
+    --color-violet: #7C3AED;
+    --color-violet-light: #7C3AED;
+    --color-violet-dim: #e8deff;
+    --shadow-ambient: 0 12px 32px rgba(25, 28, 29, 0.06);
+    --shadow-float: 0 8px 24px rgba(25, 28, 29, 0.08);
+  }
+}
+
+/* ─── Base resets ─── */
+html {
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+/* ─── Scrollbar styling ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-highest);
+  border-radius: 3px;
+}
+
+/* ─── Focus ring ─── */
+*:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+/* ─── Animations ─── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 400ms ease-out both;
+}
+
+.animate-slide-up {
+  animation: slide-up 500ms ease-out both;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Stagger utility */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+.stagger-7 { animation-delay: 350ms; }
+.stagger-8 { animation-delay: 400ms; }

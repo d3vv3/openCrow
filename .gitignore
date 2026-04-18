@@ -1,0 +1,22 @@
+.DS_Store
+.env.*
+!.env.example
+.env
+
+# Go
+bin/
+dist/
+coverage.out
+
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE
+.idea/
+.vscode/

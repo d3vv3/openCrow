@@ -1,0 +1,117 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: opencrow-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: opencrow-redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    image: migrate/migrate:v4.18.3
+    container_name: opencrow-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./server/migrations:/migrations:ro
+    command:
+      [
+        "-path",
+        "/migrations",
+        "-database",
+        "${DATABASE_URL}",
+        "up"
+      ]
+
+  server-state-init:
+    image: alpine:3.20
+    container_name: opencrow-state-init
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /data && chown -R 65532:65532 /data && chmod -R u+rwX,g+rwX /data"
+      ]
+    volumes:
+      - server_state:/data
+    restart: "no"
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: opencrow-server
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_ADDR: ${REDIS_ADDR}
+      API_HOST: ${API_HOST}
+      API_PORT: ${API_PORT}
+      APP_ENV: ${APP_ENV}
+      APP_BASE_URL: ${APP_BASE_URL}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL}
+      STATE_DIR: /data
+      CONFIG_FILE_PATH: /data/config.json
+      SERVER_SHELL_ENABLED: "true"
+      TZ: ${TZ:-UTC}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      server-state-init:
+        condition: service_completed_successfully
+    ports:
+      - "${API_PORT}:8080"
+    volumes:
+      - server_state:/data
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    container_name: opencrow-web
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+      API_INTERNAL_BASE_URL: http://server:8080
+    depends_on:
+      server:
+        condition: service_started
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  server_state:
