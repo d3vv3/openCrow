@@ -385,7 +385,7 @@ export interface SSHServerConfig {
   id?: string;
   name: string;
   host: string;
-  port: number;
+  port?: number;
   username: string;
   authMode: "key" | "password";
   sshKey?: string;

@@ -10,6 +10,7 @@ coverage.out
 
 # Node
 node_modules/
+*.tsbuildinfo
 .next/
 out/
 npm-debug.log*

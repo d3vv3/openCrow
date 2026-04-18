@@ -1013,7 +1013,7 @@ function SSHServerCard({
             }} />
             <Input label="IP Address / Hostname" value={server.host} onChange={(e) => updateConfig((c) => { c.integrations.sshServers[i].host = e.target.value; return c; })} />
             <Input label="Username" value={server.username} onChange={(e) => updateConfig((c) => { c.integrations.sshServers[i].username = e.target.value; return c; })} />
-            <Input label="Port" type="number" value={server.port || 22} onChange={(e) => updateConfig((c) => { c.integrations.sshServers[i].port = parseInt(e.target.value) || 22; return c; })} />
+            <Input label="Port" type="number" value={server.port ?? ""} onChange={(e) => updateConfig((c) => { const n = parseInt(e.target.value); c.integrations.sshServers[i].port = isNaN(n) ? undefined : n; return c; })} />
           </div>
 
           <div className="flex items-center gap-3">
