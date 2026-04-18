@@ -63,6 +63,8 @@ services:
       dockerfile: Dockerfile
       target: runtime-dev
     container_name: opencrow-server-dev
+    cap_add:
+      - SYS_ADMIN
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://opencrow:opencrow@postgres:5432/opencrow?sslmode=disable}
       REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
@@ -95,6 +97,7 @@ services:
       - "${API_PORT:-8080}:8080"
     volumes:
       - server_state_dev:/data
+      - sandbox_dev:/sandbox
       - ./server:/app
 
   whisper:
@@ -138,5 +141,7 @@ volumes:
     name: ${SERVER_STATE_VOLUME_NAME:-opencrow_server_state}
   whisper_models_dev:
     name: ${WHISPER_MODELS_VOLUME_NAME:-opencrow_whisper_models}
+  sandbox_dev:
+    name: ${SANDBOX_VOLUME_NAME:-opencrow_sandbox}
   web_node_modules_dev:
   web_next_cache_dev:

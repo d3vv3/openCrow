@@ -183,7 +183,7 @@ export default function TerminalView() {
             <span className="block h-3 w-3 rounded-full bg-[#28c840]" />
           </div>
           <span className="text-xs font-mono text-[#8888aa]">
-            openCrow@server &mdash; /bin/bash
+            openCrow@sandbox &mdash; /bin/bash
           </span>
           <div className="ml-auto flex items-center gap-3">
             {connected ? (

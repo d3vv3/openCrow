@@ -42,7 +42,7 @@ func (s *Server) handleRunServerCommand(w http.ResponseWriter, r *http.Request) 
 	execCtx, cancel := context.WithTimeout(r.Context(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(execCtx, shell, "-lc", commandText)
+	cmd := exec.CommandContext(execCtx, "chroot", sandboxRoot, shell, "-lc", commandText)
 	var stdoutBuf bytes.Buffer
 	var stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf

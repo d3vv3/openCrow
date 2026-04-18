@@ -18,6 +18,7 @@ const (
 	shellDefaultTimeout = 30 * time.Second
 	shellMaxTimeout     = 120 * time.Second
 	processMaxOutputLen = 30_000
+	sandboxRoot         = "/sandbox"
 )
 
 // blockedPatterns are regexes that match destructive shell commands.
@@ -73,10 +74,10 @@ func executeShellCommand(ctx context.Context, shell, command string, timeout tim
 	execCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(execCtx, shell, "-c", command)
 	if workingDir != "" {
-		cmd.Dir = workingDir
+		command = fmt.Sprintf("cd %s 2>/dev/null; %s", workingDir, command)
 	}
+	cmd := exec.CommandContext(execCtx, "chroot", sandboxRoot, shell, "-c", command)
 
 	// Set filtered env vars
 	if len(env) > 0 {
@@ -170,9 +171,10 @@ func (pm *ProcessManager) StartBackground(ctx context.Context, shell, command st
 
 	sessionID := fmt.Sprintf("bg-%d", pm.nextID.Add(1))
 
-	cmd := exec.Command(shell, "-c", command)
+	cmd := exec.Command("chroot", sandboxRoot, shell, "-c", command)
 	if workingDir != "" {
-		cmd.Dir = workingDir
+		// Prepend cd into the chroot command
+		cmd = exec.Command("chroot", sandboxRoot, shell, "-c", fmt.Sprintf("cd %s 2>/dev/null; %s", workingDir, command))
 	}
 	if len(env) > 0 {
 		for k, v := range env {

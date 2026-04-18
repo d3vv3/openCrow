@@ -16,21 +16,24 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=mod -ldflags="-s -w" -o 
 # Runtime base: minimal Alpine
 FROM alpine:3.20 AS runtime-base
 RUN addgroup -g 65532 nonroot && adduser -u 65532 -G nonroot -S -H nonroot
-RUN apk add --no-cache ca-certificates tzdata
-VOLUME ["/data"]
+RUN apk add --no-cache ca-certificates tzdata bash wget
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+VOLUME ["/data", "/sandbox"]
 EXPOSE 8080
 
 # Dev runtime: hot-reload with CompileDaemon
 FROM golang:1.23-alpine AS runtime-dev
 WORKDIR /app
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata bash wget
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 COPY go.mod go.sum ./
 RUN go mod download
 RUN go install github.com/githubnemo/CompileDaemon@latest
 EXPOSE 8080
-ENTRYPOINT ["CompileDaemon", "-build=go build -mod=mod -o /tmp/server ./cmd/api", "-command=/tmp/server", "-graceful-kill=true", "-polling=true"]
+ENTRYPOINT ["/entrypoint.sh", "CompileDaemon", "-build=go build -mod=mod -o /tmp/server ./cmd/api", "-command=/tmp/server", "-graceful-kill=true", "-polling=true"]
 
 FROM runtime-base AS runtime-prod
 COPY --from=build-prod /out/server /server
-USER nonroot:nonroot
-ENTRYPOINT ["/server"]
+ENTRYPOINT ["/entrypoint.sh", "/server"]

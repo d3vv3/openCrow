@@ -142,7 +142,7 @@ func (m *TerminalSessionManager) getOrCreate(userID, shell string) (*terminalSes
 		shell = resolveShell()
 	}
 
-	cmd := exec.Command(shell)
+	cmd := exec.Command("chroot", sandboxRoot, shell)
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 
 	ptmx, err := pty.Start(cmd)
