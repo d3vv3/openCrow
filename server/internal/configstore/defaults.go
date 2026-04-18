@@ -122,6 +122,7 @@ var defaultTools = []ToolDefinition{
 	{ID: "list_mcp_servers", Name: "list_mcp_servers", Description: "List configured MCP servers.", Source: "builtin", Parameters: []ToolParameter{}},
 	{ID: "add_mcp_server", Name: "add_mcp_server", Description: "Add (or update by name/URL) an MCP server configuration.", Source: "builtin", Parameters: []ToolParameter{{Name: "name", Type: "string", Description: "Display name for the MCP server", Required: true}, {Name: "url", Type: "string", Description: "Base URL for the MCP server", Required: true}, {Name: "enabled", Type: "boolean", Description: "Whether the MCP server is enabled (default true)", Required: false}, {Name: "headers", Type: "object", Description: "Optional HTTP headers map", Required: false}}},
 	{ID: "remove_mcp_server", Name: "remove_mcp_server", Description: "Remove an MCP server configuration by id, name, or url.", Source: "builtin", Parameters: []ToolParameter{{Name: "id", Type: "string", Description: "MCP server id", Required: false}, {Name: "name", Type: "string", Description: "MCP server name", Required: false}, {Name: "url", Type: "string", Description: "MCP server URL", Required: false}}},
+	{ID: "ssh_execute", Name: "ssh_execute", Description: "Execute a shell command on a remote server over SSH. Returns stdout, stderr and exit code. Each command runs in a fresh shell. Set background=true for long-lived processes. Use timeout parameter for commands that may take a while (e.g. installs).", Source: "builtin", Parameters: []ToolParameter{{Name: "serverName", Type: "string", Description: "Name of the configured SSH server", Required: true}, {Name: "command", Type: "string", Description: "Shell command to execute", Required: true}, {Name: "timeout", Type: "integer", Description: "Timeout in seconds (default 300)", Required: false}, {Name: "working_dir", Type: "string", Description: "Working directory for the command", Required: false}, {Name: "background", Type: "boolean", Description: "Run in background (nohup). Returns immediately.", Required: false}}},
 }
 
 const DefaultSystemPrompt = `You're not a chatbot. You're a personal assistant who grows with your user.
@@ -171,7 +172,7 @@ func DefaultUserConfig() UserConfig {
 	}
 
 	return UserConfig{
-		Integrations: IntegrationsConfig{EmailAccounts: []EmailAccountConfig{}, TelegramBots: []TelegramBotConfig{}},
+		Integrations: IntegrationsConfig{EmailAccounts: []EmailAccountConfig{}, TelegramBots: []TelegramBotConfig{}, SSHServers: []SSHServerConfig{}},
 		Tools: ToolsConfig{
 			Definitions: toolDefinitions,
 			Enabled:     toolEnabled,

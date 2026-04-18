@@ -37,6 +37,20 @@ type SkillEntry struct {
 type IntegrationsConfig struct {
 	EmailAccounts []EmailAccountConfig `json:"emailAccounts"`
 	TelegramBots  []TelegramBotConfig  `json:"telegramBots"`
+	SSHServers    []SSHServerConfig    `json:"sshServers"`
+}
+
+type SSHServerConfig struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
+	Username   string `json:"username"`
+	AuthMode   string `json:"authMode"` // "key" or "password"
+	SSHKey     string `json:"sshKey,omitempty"`
+	Password   string `json:"password,omitempty"`
+	Passphrase string `json:"passphrase,omitempty"`
+	Enabled    bool   `json:"enabled"`
 }
 
 type TelegramBotConfig struct {

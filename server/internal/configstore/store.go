@@ -199,6 +199,15 @@ func normalize(cfg UserConfig) UserConfig {
 				cfg.Tools.Definitions[i].Parameters = defaultTool.Parameters
 				break
 			}
+			// Migrate renamed tools
+			renames := map[string]string{"ssh_execute": "remote_execute"}
+			if old, ok := renames[defaultTool.Name]; ok && strings.EqualFold(existing.Name, old) {
+				exists = true
+				cfg.Tools.Definitions[i].Name = defaultTool.Name
+				cfg.Tools.Definitions[i].Description = defaultTool.Description
+				cfg.Tools.Definitions[i].Parameters = defaultTool.Parameters
+				break
+			}
 		}
 		if !exists {
 			id := uuid.NewString()
@@ -234,6 +243,20 @@ func normalize(cfg UserConfig) UserConfig {
 	}
 	if cfg.Integrations.TelegramBots == nil {
 		cfg.Integrations.TelegramBots = []TelegramBotConfig{}
+	}
+	if cfg.Integrations.SSHServers == nil {
+		cfg.Integrations.SSHServers = []SSHServerConfig{}
+	}
+	for i := range cfg.Integrations.SSHServers {
+		if cfg.Integrations.SSHServers[i].ID == "" {
+			cfg.Integrations.SSHServers[i].ID = uuid.NewString()
+		}
+		if cfg.Integrations.SSHServers[i].Port <= 0 {
+			cfg.Integrations.SSHServers[i].Port = 22
+		}
+		if cfg.Integrations.SSHServers[i].AuthMode == "" {
+			cfg.Integrations.SSHServers[i].AuthMode = "key"
+		}
 	}
 	for i := range cfg.Integrations.TelegramBots {
 		if cfg.Integrations.TelegramBots[i].ID == "" {

@@ -357,6 +357,19 @@ export interface MCPServerConfig {
   enabled: boolean;
 }
 
+export interface SSHServerConfig {
+  id?: string;
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  authMode: "key" | "password";
+  sshKey?: string;
+  password?: string;
+  passphrase?: string;
+  enabled: boolean;
+}
+
 export interface HeartbeatEventDTO {
   id: string;
   status: string;
@@ -389,7 +402,7 @@ export interface ProviderModelsProbeResult {
 }
 
 export interface UserConfig {
-  integrations: { emailAccounts: EmailAccountConfig[]; telegramBots: TelegramBotConfig[] };
+  integrations: { emailAccounts: EmailAccountConfig[]; telegramBots: TelegramBotConfig[]; sshServers: SSHServerConfig[] };
   tools: {
     definitions: ToolDefinition[];
     golangTools: GolangToolEntry[];
@@ -406,7 +419,7 @@ export interface UserConfig {
 }
 
 interface ServerUserConfig {
-  integrations?: { emailAccounts?: Array<EmailAccountConfig & { useTls?: boolean }>; telegramBots?: TelegramBotConfig[] };
+  integrations?: { emailAccounts?: Array<EmailAccountConfig & { useTls?: boolean }>; telegramBots?: TelegramBotConfig[]; sshServers?: SSHServerConfig[] };
   tools?: {
     definitions?: ToolDefinition[];
     golangTools?: GolangToolEntry[];
@@ -453,6 +466,7 @@ function normalizeUserConfig(raw: ServerUserConfig): UserConfig {
         tls: acct.tls ?? acct.useTls ?? true,
       })),
       telegramBots: Array.isArray(raw?.integrations?.telegramBots) ? raw.integrations!.telegramBots : [],
+      sshServers: Array.isArray(raw?.integrations?.sshServers) ? raw.integrations!.sshServers : [],
     },
     tools: {
       definitions: definitions.map((tool) => ({
@@ -514,6 +528,7 @@ function toServerUserConfig(config: UserConfig): ServerUserConfig {
         useTls: acct.tls,
       })),
       telegramBots: config.integrations.telegramBots ?? [],
+      sshServers: config.integrations.sshServers ?? [],
     },
     tools: {
       definitions: config.tools.definitions,
@@ -805,6 +820,21 @@ export const endpoints = {
     useTls: boolean;
   }) =>
     api<{ ok: boolean; error?: string; detail?: string }>("/v1/email/test", {
+      method: "POST",
+      body: JSON.stringify(params),
+    }),
+
+  // SSH test
+  testSSHConnection: (params: {
+    host: string;
+    port: number;
+    username: string;
+    authMode: string;
+    sshKey?: string;
+    password?: string;
+    passphrase?: string;
+  }) =>
+    api<{ ok: boolean; error?: string }>("/v1/ssh/test", {
       method: "POST",
       body: JSON.stringify(params),
     }),

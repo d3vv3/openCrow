@@ -17,6 +17,7 @@ import (
 
 	"github.com/opencrow/opencrow/server/internal/configstore"
 	"github.com/opencrow/opencrow/server/internal/realtime"
+	"golang.org/x/crypto/ssh"
 )
 
 // processManager is the singleton process manager for background shell sessions.
@@ -65,6 +66,7 @@ func isBuiltinToolName(name string) bool {
 		"setup_email", "check_email", "read_email", "reply_email", "compose_email", "search_email",
 		"send_notification",
 		"execute_shell_command", "manage_process",
+		"ssh_execute",
 		"list_skills", "get_skill", "install_skills",
 		"list_mcp_servers", "add_mcp_server", "remove_mcp_server":
 		return true
@@ -156,6 +158,10 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 
 	case "manage_process":
 		return s.toolManageProcess(args)
+
+	// ── Remote SSH ───────────────────────────────────────────────────
+	case "ssh_execute":
+		return s.toolRemoteExecute(ctx, userID, args)
 
 	// ── Skills ───────────────────────────────────────────────────────
 	case "list_skills":
@@ -1570,6 +1576,107 @@ func (s *Server) toolExecuteShellCommand(ctx context.Context, userID string, arg
 	}
 	s.writeCommandToTerminal(userID, command, combined, false)
 	return result, nil
+}
+
+func (s *Server) toolRemoteExecute(ctx context.Context, userID string, args map[string]any) (map[string]any, error) {
+	serverName, _ := args["serverName"].(string)
+	if serverName == "" {
+		return map[string]any{"success": false, "error": "serverName is required"}, nil
+	}
+	command, _ := args["command"].(string)
+	if command == "" {
+		return map[string]any{"success": false, "error": "command is required"}, nil
+	}
+
+	cfg, err := s.configStore.GetUserConfig(userID)
+	if err != nil {
+		return map[string]any{"success": false, "error": "failed to load config"}, nil
+	}
+
+	var srv *configstore.SSHServerConfig
+	for i := range cfg.Integrations.SSHServers {
+		if strings.EqualFold(cfg.Integrations.SSHServers[i].Name, serverName) {
+			srv = &cfg.Integrations.SSHServers[i]
+			break
+		}
+	}
+	if srv == nil {
+		return map[string]any{"success": false, "error": fmt.Sprintf("server %q not found", serverName)}, nil
+	}
+	if !srv.Enabled {
+		return map[string]any{"success": false, "error": fmt.Sprintf("server %q is disabled", serverName)}, nil
+	}
+
+	timeout := 300 * time.Second
+	if t, ok := args["timeout"].(float64); ok && t > 0 {
+		timeout = time.Duration(t) * time.Second
+	}
+	workingDir, _ := args["working_dir"].(string)
+	background, _ := args["background"].(bool)
+
+	sshCfg, err := buildSSHClientConfig(srv.Username, srv.AuthMode, srv.SSHKey, srv.Password, srv.Passphrase)
+	if err != nil {
+		return map[string]any{"success": false, "error": err.Error()}, nil
+	}
+
+	port := srv.Port
+	if port <= 0 {
+		port = 22
+	}
+	addr := fmt.Sprintf("%s:%d", srv.Host, port)
+	client, err := ssh.Dial("tcp", addr, sshCfg)
+	if err != nil {
+		return map[string]any{"success": false, "error": "ssh dial: " + err.Error()}, nil
+	}
+	defer client.Close()
+
+	session, err := client.NewSession()
+	if err != nil {
+		return map[string]any{"success": false, "error": "ssh session: " + err.Error()}, nil
+	}
+	defer session.Close()
+
+	cmd := command
+	if workingDir != "" {
+		cmd = fmt.Sprintf("cd %s && %s", workingDir, cmd)
+	}
+	if background {
+		cmd = fmt.Sprintf("nohup sh -c %s </dev/null >nohup.out 2>&1 & echo $!", shellescape(cmd))
+	}
+
+	execCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	type result struct {
+		out []byte
+		err error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		out, err := session.CombinedOutput(cmd)
+		ch <- result{out, err}
+	}()
+
+	select {
+	case <-execCtx.Done():
+		_ = session.Signal(ssh.SIGKILL)
+		return map[string]any{"success": false, "stdout": "", "stderr": "timeout", "exitCode": -1}, nil
+	case res := <-ch:
+		exitCode := 0
+		if res.err != nil {
+			if exitErr, ok := res.err.(*ssh.ExitError); ok {
+				exitCode = exitErr.ExitStatus()
+			} else {
+				return map[string]any{"success": false, "error": res.err.Error()}, nil
+			}
+		}
+		output := truncateOutput(string(res.out), 32000)
+		return map[string]any{"success": true, "stdout": output, "stderr": "", "exitCode": exitCode}, nil
+	}
+}
+
+func shellescape(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
 func (s *Server) toolManageProcess(args map[string]any) (map[string]any, error) {
