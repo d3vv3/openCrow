@@ -857,6 +857,21 @@ export const endpoints = {
       body: JSON.stringify(params),
     }),
 
+  // Email autoconfig
+  emailAutoconfig: (email: string) =>
+    api<{
+      imapHost?: string;
+      imapPort?: number;
+      imapUsername?: string;
+      smtpHost?: string;
+      smtpPort?: number;
+      useTls?: boolean;
+      source?: string;
+    }>("/v1/email/autoconfig", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
   // SSH test
   testSSHConnection: (params: {
     host: string;

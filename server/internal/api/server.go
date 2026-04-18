@@ -246,6 +246,7 @@ func (s *Server) routes() {
 	s.mux.Handle("GET /v1/email/poll-events", s.requireAccessToken(http.HandlerFunc(s.handleListEmailPollEvents)))
 	s.mux.Handle("POST /v1/email/poll", s.requireAccessToken(http.HandlerFunc(s.handleTriggerEmailPoll)))
 	s.mux.Handle("POST /v1/email/test", s.requireAccessToken(http.HandlerFunc(s.handleTestEmailConnection)))
+	s.mux.Handle("POST /v1/email/autoconfig", s.requireAccessToken(http.HandlerFunc(s.handleEmailAutoconfig)))
 	s.mux.Handle("POST /v1/ssh/test", s.requireAccessToken(http.HandlerFunc(s.handleTestSSHConnection)))
 
 	s.mux.Handle("GET /v1/status/workers", s.requireAccessToken(http.HandlerFunc(s.handleWorkerStatus)))

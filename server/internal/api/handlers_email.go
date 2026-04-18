@@ -3,8 +3,10 @@ package api
 import (
 	"bufio"
 	"crypto/tls"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -235,4 +237,170 @@ func (s *Server) handleTestEmailConnection(w http.ResponseWriter, r *http.Reques
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "detail": "connected"})
+}
+
+func (s *Server) handleEmailAutoconfig(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	email := strings.TrimSpace(req.Email)
+	parts := strings.SplitN(email, "@", 2)
+	if len(parts) != 2 || parts[1] == "" {
+		writeError(w, http.StatusBadRequest, "invalid email address")
+		return
+	}
+	domain := strings.ToLower(parts[1])
+
+	type result struct {
+		ImapHost     string `json:"imapHost,omitempty"`
+		ImapPort     int    `json:"imapPort,omitempty"`
+		ImapUsername string `json:"imapUsername,omitempty"`
+		SmtpHost     string `json:"smtpHost,omitempty"`
+		SmtpPort     int    `json:"smtpPort,omitempty"`
+		UseTLS       bool   `json:"useTls"`
+		Source       string `json:"source,omitempty"`
+	}
+
+	if res, src := fetchThunderbirdAutoconfig(domain, email); res != nil {
+		writeJSON(w, http.StatusOK, result{
+			ImapHost: res.imapHost, ImapPort: res.imapPort,
+			ImapUsername: res.imapUsername,
+			SmtpHost: res.smtpHost, SmtpPort: res.smtpPort,
+			UseTLS: res.useTLS, Source: src,
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result{Source: "none"})
+}
+
+type autoconfigResult struct {
+	imapHost     string
+	imapPort     int
+	imapUsername string
+	smtpHost     string
+	smtpPort     int
+	useTLS       bool
+}
+
+func fetchThunderbirdAutoconfig(domain, email string) (*autoconfigResult, string) {
+	type attempt struct {
+		url    string
+		source string
+	}
+	urls := []attempt{
+		{"https://autoconfig." + domain + "/mail/config-v1.1.xml?emailaddress=" + email, "autoconfig"},
+		{"http://autoconfig." + domain + "/mail/config-v1.1.xml?emailaddress=" + email, "autoconfig-http"},
+		{"https://" + domain + "/.well-known/autoconfig/mail/config-v1.1.xml?emailaddress=" + email, "wellknown"},
+		{"http://" + domain + "/.well-known/autoconfig/mail/config-v1.1.xml?emailaddress=" + email, "wellknown-http"},
+		{"https://autoconfig.thunderbird.net/v1.1/" + domain, "ispdb"},
+	}
+
+	// Resolve CNAME on autoconfig.{domain} — if it points to another domain,
+	// also try the ISPDB for that provider's domain.
+	if cname, err := net.LookupCNAME("autoconfig." + domain); err == nil {
+		cname = strings.TrimSuffix(strings.ToLower(cname), ".")
+		if cname != "autoconfig."+domain && cname != "" {
+			// Extract parent domain from CNAME target (e.g. autoconfig.fastmail.com -> fastmail.com)
+			if parts := strings.SplitN(cname, ".", 2); len(parts) == 2 && parts[1] != "" {
+				cnameDomain := parts[1]
+				if cnameDomain != domain {
+					urls = append(urls, attempt{
+						"https://autoconfig.thunderbird.net/v1.1/" + cnameDomain, "ispdb-cname",
+					})
+				}
+			}
+		}
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	for _, u := range urls {
+		resp, err := client.Get(u.url)
+		if err != nil {
+			continue
+		}
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 256*1024))
+		resp.Body.Close()
+		if err != nil || resp.StatusCode != 200 {
+			continue
+		}
+		if res := parseThunderbirdXML(body, email); res != nil {
+			return res, u.source
+		}
+	}
+	return nil, ""
+}
+
+func parseThunderbirdXML(data []byte, email string) *autoconfigResult {
+	type xmlServer struct {
+		Type       string `xml:"type,attr"`
+		Hostname   string `xml:"hostname"`
+		Port       int    `xml:"port"`
+		SocketType string `xml:"socketType"`
+		Username   string `xml:"username"`
+	}
+	type xmlConfig struct {
+		XMLName  xml.Name `xml:"clientConfig"`
+		Provider struct {
+			Incoming []xmlServer `xml:"incomingServer"`
+			Outgoing []xmlServer `xml:"outgoingServer"`
+		} `xml:"emailProvider"`
+	}
+
+	var cfg xmlConfig
+	if err := xml.Unmarshal(data, &cfg); err != nil {
+		return nil
+	}
+
+	res := &autoconfigResult{useTLS: true}
+	parts := strings.SplitN(email, "@", 2)
+	localPart := parts[0]
+	domain := ""
+	if len(parts) == 2 {
+		domain = parts[1]
+	}
+
+	replacePlaceholders := func(s string) string {
+		s = strings.ReplaceAll(s, "%EMAILADDRESS%", email)
+		s = strings.ReplaceAll(s, "%EMAILLOCALPART%", localPart)
+		s = strings.ReplaceAll(s, "%EMAILDOMAIN%", domain)
+		return s
+	}
+
+	for _, srv := range cfg.Provider.Incoming {
+		if strings.EqualFold(srv.Type, "imap") {
+			res.imapHost = replacePlaceholders(srv.Hostname)
+			res.imapPort = srv.Port
+			res.imapUsername = replacePlaceholders(srv.Username)
+			st := strings.ToUpper(srv.SocketType)
+			res.useTLS = st == "SSL" || st == "STARTTLS"
+			break
+		}
+	}
+	for _, srv := range cfg.Provider.Outgoing {
+		if strings.EqualFold(srv.Type, "smtp") {
+			res.smtpHost = replacePlaceholders(srv.Hostname)
+			res.smtpPort = srv.Port
+			break
+		}
+	}
+
+	if res.imapHost == "" {
+		return nil
+	}
+	if res.imapPort == 0 {
+		if res.useTLS {
+			res.imapPort = 993
+		} else {
+			res.imapPort = 143
+		}
+	}
+	if res.smtpPort == 0 {
+		res.smtpPort = 587
+	}
+	return res
 }

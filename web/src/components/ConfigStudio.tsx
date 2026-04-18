@@ -647,6 +647,7 @@ function EmailAccountCard({
   const [expanded, setExpanded] = useState(!configured);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string; detail?: string } | null>(null);
+  const [autoconfStatus, setAutoconfStatus] = useState<string | null>(null);
 
   const handleTest = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -665,6 +666,31 @@ function EmailAccountCard({
       setTestResult({ ok: false, error: "Request failed" });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const runAutoconfig = async (email: string) => {
+    if (!email.includes("@")) return;
+    setAutoconfStatus("looking up…");
+    try {
+      const res = await endpoints.emailAutoconfig(email);
+      if (res.imapHost) {
+        updateConfig((c) => {
+          const a = c.integrations.emailAccounts[i];
+          a.imapHost = res.imapHost!;
+          a.imapPort = res.imapPort ?? 993;
+          if (!a.imapUsername) a.imapUsername = res.imapUsername ?? email;
+          a.smtpHost = res.smtpHost ?? "";
+          a.smtpPort = res.smtpPort ?? 587;
+          if (res.useTls !== undefined) a.tls = res.useTls;
+          return c;
+        });
+        setAutoconfStatus(`auto-configured via ${res.source}`);
+      } else {
+        setAutoconfStatus(null);
+      }
+    } catch {
+      setAutoconfStatus(null);
     }
   };
 
@@ -709,7 +735,7 @@ function EmailAccountCard({
               }
               prev.address = newAddr;
               return c;
-            })} />
+            })} onBlur={(e) => { if (!acct.imapHost) runAutoconfig(e.target.value); }} />
             <Input label="IMAP Host" value={acct.imapHost} onChange={(e) => updateConfig((c) => { c.integrations.emailAccounts[i].imapHost = e.target.value; return c; })} />
             <Input label="IMAP Port" type="number" value={acct.imapPort} onChange={(e) => updateConfig((c) => { c.integrations.emailAccounts[i].imapPort = parseInt(e.target.value) || 0; return c; })} />
             <Input label="IMAP Username" value={acct.imapUsername ?? ""} onChange={(e) => updateConfig((c) => { c.integrations.emailAccounts[i].imapUsername = e.target.value; return c; })} />
@@ -720,6 +746,7 @@ function EmailAccountCard({
           <div className="flex items-center gap-6">
             <Toggle label="TLS" checked={acct.tls} onChange={(v) => updateConfig((c) => { c.integrations.emailAccounts[i].tls = v; return c; })} />
             <Toggle label="Enabled" checked={acct.enabled} onChange={(v) => updateConfig((c) => { c.integrations.emailAccounts[i].enabled = v; return c; })} />
+            {autoconfStatus && <span className="text-xs text-cyan font-mono ml-auto">{autoconfStatus}</span>}
           </div>
           {testResult && !testResult.ok && (
             <p className="text-xs text-error font-mono">{testResult.error}</p>
