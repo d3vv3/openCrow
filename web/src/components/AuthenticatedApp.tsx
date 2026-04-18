@@ -47,7 +47,9 @@ function SidebarNavButton({
         setActiveSection(section);
       }}
       className={`flex w-full items-center gap-3 rounded-sm px-4 py-2.5 text-sm transition-colors duration-150 ${
-        active ? "text-violet-light" : "text-on-surface-variant hover:bg-surface-mid/50 hover:text-on-surface"
+        active
+          ? "text-violet-light"
+          : "text-on-surface-variant hover:bg-surface-mid/50 hover:text-on-surface"
       }`}
     >
       {icon}
@@ -115,11 +117,15 @@ export default function AuthenticatedApp({ onLogout }: { onLogout?: () => void }
               <span className="text-on-surface-variant">open</span>
               <span className="text-violet-light">Crow</span>
             </span>
-            <Image src="/crow.png" alt="openCrow" width={44} height={44} className="opacity-90" />
+            <Image
+              src="/crow.svg"
+              alt="openCrow"
+              width={50}
+              height={50}
+              className="opacity-90 mx-4"
+            />
           </h1>
-          <p className="mt-1 font-mono text-xs text-on-surface-variant">
-            v0.1.0 . Active
-          </p>
+          <p className="mt-1 font-mono text-xs text-on-surface-variant">v0.1.0 . Active</p>
         </div>
 
         {/* Conversation nav */}
@@ -150,78 +156,92 @@ export default function AuthenticatedApp({ onLogout }: { onLogout?: () => void }
                 </p>
               ) : (
                 <div className="space-y-1">
-                {visibleConversations.map((chat) => {
-                  const isActive = activeSection === "chat" && activeConversationId === chat.id;
-                  const isAutomatic = !!chat.isAutomatic;
-                  return (
-                    <div
-                      key={chat.id}
-                      className={`group relative flex items-center rounded-sm transition-all ${
-                        isAutomatic
-                          ? isActive
-                            ? "bg-surface-mid shadow-[inset_0_0_0_1px_var(--color-outline-ghost)]"
-                            : "bg-surface-low hover:bg-surface-mid/70"
-                          : isActive
-                            ? "bg-surface-mid"
-                            : "hover:bg-surface-mid/50"
-                      }`}
-                    >
-                      <div className={`absolute inset-y-2 left-0 w-[3px] rounded-r-sm ${isActive ? "bg-violet" : isAutomatic ? "bg-warning/70" : "bg-cyan/70"}`} />
-                      <button
-                        onClick={() => {
-                          setActiveSection("chat");
-                          setRequestedConfigTab(undefined);
-                          setActiveConversationId(chat.id);
-                        }}
-                        className={`flex-1 min-w-0 px-3 py-2 text-left ${
+                  {visibleConversations.map((chat) => {
+                    const isActive = activeSection === "chat" && activeConversationId === chat.id;
+                    const isAutomatic = !!chat.isAutomatic;
+                    return (
+                      <div
+                        key={chat.id}
+                        className={`group relative flex items-center rounded-sm transition-all ${
                           isAutomatic
                             ? isActive
-                              ? "text-on-surface"
-                              : "text-on-surface hover:text-on-surface"
+                              ? "bg-surface-mid shadow-[inset_0_0_0_1px_var(--color-outline-ghost)]"
+                              : "bg-surface-low hover:bg-surface-mid/70"
                             : isActive
-                              ? "text-violet-light"
-                              : "text-on-surface-variant hover:text-on-surface"
+                              ? "bg-surface-mid"
+                              : "hover:bg-surface-mid/50"
                         }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <p className={`truncate text-sm font-medium ${isAutomatic ? "text-on-surface" : ""}`}>{chat.title || "Untitled chat"}</p>
-                        </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          {isAutomatic && (
-                            <span className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
-                              isActive
-                                ? "bg-violet/12 text-violet"
-                                : "bg-warning/12 text-warning"
-                            }`}>
-                              {automationLabel(chat.automationKind)}
-                            </span>
-                          )}
-                          <p className="truncate text-xs text-on-surface-variant">
-                            {new Date(chat.updatedAt || chat.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          await endpoints.deleteConversation(chat.id);
-                          setConversations((prev) => prev.filter((c) => c.id !== chat.id));
-                          if (activeConversationId === chat.id) setActiveConversationId(null);
-                        }}
-                        className={`shrink-0 px-2 py-2 transition-all ${
-                          isAutomatic
-                            ? "text-on-surface-variant/60 opacity-100 group-hover:text-error"
-                            : "text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-red-400"
-                        }`}
-                        title="Delete conversation"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                          <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
-                    </div>
-                  );
-                })}
+                        <div
+                          className={`absolute inset-y-2 left-0 w-[3px] rounded-r-sm ${isActive ? "bg-violet" : isAutomatic ? "bg-warning/70" : "bg-cyan/70"}`}
+                        />
+                        <button
+                          onClick={() => {
+                            setActiveSection("chat");
+                            setRequestedConfigTab(undefined);
+                            setActiveConversationId(chat.id);
+                          }}
+                          className={`flex-1 min-w-0 px-3 py-2 text-left ${
+                            isAutomatic
+                              ? isActive
+                                ? "text-on-surface"
+                                : "text-on-surface hover:text-on-surface"
+                              : isActive
+                                ? "text-violet-light"
+                                : "text-on-surface-variant hover:text-on-surface"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <p
+                              className={`truncate text-sm font-medium ${isAutomatic ? "text-on-surface" : ""}`}
+                            >
+                              {chat.title || "Untitled chat"}
+                            </p>
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            {isAutomatic && (
+                              <span
+                                className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
+                                  isActive
+                                    ? "bg-violet/12 text-violet"
+                                    : "bg-warning/12 text-warning"
+                                }`}
+                              >
+                                {automationLabel(chat.automationKind)}
+                              </span>
+                            )}
+                            <p className="truncate text-xs text-on-surface-variant">
+                              {new Date(chat.updatedAt || chat.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await endpoints.deleteConversation(chat.id);
+                            setConversations((prev) => prev.filter((c) => c.id !== chat.id));
+                            if (activeConversationId === chat.id) setActiveConversationId(null);
+                          }}
+                          className={`shrink-0 px-2 py-2 transition-all ${
+                            isAutomatic
+                              ? "text-on-surface-variant/60 opacity-100 group-hover:text-error"
+                              : "text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-red-400"
+                          }`}
+                          title="Delete conversation"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path
+                              d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -237,7 +257,8 @@ export default function AuthenticatedApp({ onLogout }: { onLogout?: () => void }
                     const next = !prev;
                     if (!next && activeConversationId) {
                       const active = conversations.find((chat) => chat.id === activeConversationId);
-                      if (active?.isAutomatic && active.automationKind !== "heartbeat") setActiveConversationId(null);
+                      if (active?.isAutomatic && active.automationKind !== "heartbeat")
+                        setActiveConversationId(null);
                     }
                     return next;
                   });

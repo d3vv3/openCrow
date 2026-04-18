@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="299.99979mm"
+   height="300mm"
+   viewBox="0 0 299.99979 300"
+   version="1.1"
+   id="svg1"
+   xml:space="preserve"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#">
+  <defs id="defs1"/>
+
+  <!-- Static white background circle -->
+  <path
+     id="path2"
+     style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:16.21;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+     d="M 150.00015,0 A 150,150 0 0 0 0,150.00015 a 150,150 0 0 0 0,0.0382 v 149.96139 h 150.00015 0.84852 v -0.002 A 150,150 0 0 0 299.99978,150.00015 150,150 0 0 0 150.00015,0 Z" />
+
+  <!-- Crow body + blink overlay, animated together -->
+  <g id="crow-body">
+
+    <!-- Crow silhouette (eye is a compound-path hole, shows white background) -->
+    <path
+       id="path1-0"
+       style="display:inline;fill:#7c3aed;fill-opacity:1;stroke-width:1.64665;stroke-linecap:round;stroke-linejoin:round"
+       d="M 139.90854,43.001324 C 105.9917,44.629314 83.372715,66.623359 74.282702,89.916547 65.346461,112.81565 52.779987,138.78636 41.051184,156.37956 29.322395,173.97274 2.0953646e-6,191.56671 2.0953646e-6,191.56671 L 4.8953229e-6,300 c 0,0 90.8538951046771,0 150.8487351046771,-1.4e-4 68.97655,-53.33813 49.37937,-129.37796 49.37937,-129.37796 0,0 -8.1392,-25.0526 8.93624,-38.53775 6.22959,-4.91978 47.47388,-19.82715 67.30114,-13.12498 -9.77401,-41.050768 -65.06706,-40.2129 -74.00331,-46.635821 -7.26067,-10.61177 -27.6465,-30.997688 -62.55364,-29.322127 z m 21.63819,36.352886 c 5.27711,-8.6e-5 9.55507,4.277876 9.55502,9.554993 7e-5,5.277116 -4.27791,9.555096 -9.55502,9.555009 -5.27712,7e-5 -9.55508,-4.277893 -9.555,-9.555009 -7e-5,-5.277099 4.2779,-9.555062 9.555,-9.554993 z" />
+
+    <!--
+      Blink eyelid: purple ellipse placed over the white eye hole.
+      Eye centre (161.54673, 88.90921), radius 9.555.
+      ry=0 = invisible; ry=9.555 = fully covers the eye (closed).
+      Blinks at t=2 s, then every ~4 s thereafter.
+    -->
+    <ellipse
+       id="eye-lid"
+       cx="161.54673"
+       cy="88.90921"
+       rx="9.555"
+       ry="0"
+       fill="#7c3aed">
+
+      <!-- Blink 1 close -->
+      <animate id="b1c" attributeName="ry" values="0;9.555" dur="0.08s" begin="1s;b2o.end+3s"  fill="freeze"/>
+      <!-- Blink 1 open -->
+      <animate id="b1o" attributeName="ry" values="9.555;0" dur="0.1s"  begin="b1c.end+0.05s" fill="freeze"/>
+      <!-- Blink 2 close -->
+      <animate id="b2c" attributeName="ry" values="0;9.555" dur="0.08s" begin="b1o.end+0.45s" fill="freeze"/>
+      <!-- Blink 2 open — eye stays open after this -->
+      <animate id="b2o" attributeName="ry" values="9.555;0" dur="0.1s"  begin="b2c.end+0.05s" fill="freeze"/>
+
+    </ellipse>
+  </g>
+
+  <metadata id="metadata1">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <cc:license rdf:resource="http://creativecommons.org/licenses/by/4.0/"/>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>

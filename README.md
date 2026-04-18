@@ -1,8 +1,9 @@
 # openCrow
 
 <p align="center">
-  <img src="./crow.png" alt="openCrow" width="200" />
+  <img src="./crow-animated.svg" alt="openCrow" width="200" />
   <br/>
+  <b>openCrow</b> -
   <b>Self-hostable multi-device AI assistant platform.</b>
 </p>
 
