@@ -1,19 +1,22 @@
 "use client";
 
 import { forwardRef, type InputHTMLAttributes } from "react";
+import { Tooltip } from "./Tooltip";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  tooltip?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = "", ...rest }, ref) => {
+  ({ label, error, tooltip, className = "", ...rest }, ref) => {
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label className="text-xs uppercase tracking-wider text-on-surface-variant font-mono">
+          <label className="text-xs uppercase tracking-wider text-on-surface-variant font-mono flex items-center">
             {label}
+            {tooltip && <Tooltip text={tooltip} />}
           </label>
         )}
         <input
