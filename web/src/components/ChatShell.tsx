@@ -178,10 +178,10 @@ export default function ChatShell({
                         <button
                           key={p.name}
                           onClick={() => setSelectedProvider(p.name)}
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-mono transition-all duration-100 border ${
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-mono transition-all duration-100 border cursor-pointer ${
                             selectedProvider === p.name
                               ? "border-violet/60 bg-violet/20 text-violet-light"
-                              : "border-white/10 bg-white/5 text-on-surface-variant hover:text-on-surface hover:border-white/20"
+                              : "border-violet/20 bg-violet/10 text-on-surface-variant hover:border-violet/40 hover:bg-violet/20 hover:text-violet-light"
                           }`}
                         >
                           {p.model || p.name}
@@ -214,7 +214,7 @@ export default function ChatShell({
                 <div className="flex items-end gap-2 w-full">
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="mb-0.5 shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-mid/50 transition-colors"
+                    className="mb-0.5 shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md text-on-surface-variant hover:text-violet hover:bg-violet/15 transition-colors cursor-pointer"
                     aria-label="Attach files"
                     title="Attach files"
                   >
@@ -230,10 +230,10 @@ export default function ChatShell({
                     disabled={transcribing}
                     className={`mb-0.5 shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors ${
                       recording
-                        ? "text-error bg-error/10 hover:bg-error/20 animate-pulse"
+                        ? "text-error bg-error/10 hover:bg-error/20 animate-pulse cursor-pointer"
                         : transcribing
                           ? "text-on-surface-variant opacity-50 cursor-wait"
-                          : "text-on-surface-variant hover:text-on-surface hover:bg-surface-mid/50"
+                          : "text-on-surface-variant hover:text-violet hover:bg-violet/15 cursor-pointer"
                     }`}
                     aria-label={recording ? "Stop recording" : "Record voice message"}
                     title={recording ? "Stop recording" : "Voice input"}

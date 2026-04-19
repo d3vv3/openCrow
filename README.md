@@ -85,7 +85,7 @@ docker compose -f compose.yaml down
 ## Container networking note
 
 The web service uses an internal API URL (`http://server:8080`) for SSR calls inside Docker,
-while browsers continue to use `NEXT_PUBLIC_API_BASE_URL`.
+while browsers read the URL from a `<meta name="x-api-base">` tag injected at request time from the `API_BASE_URL` env var — no rebuild required to change it.
 
 ## Config Studio UI
 

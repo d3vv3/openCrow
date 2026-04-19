@@ -4,7 +4,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Spinner } from "./Spinner";
 
 const variants = {
-  primary: "bg-violet hover:bg-violet-dim text-white",
+  primary: "bg-violet text-white hover:shadow-[0_4px_20px_color-mix(in_srgb,var(--color-violet)_50%,transparent),0_2px_8px_color-mix(in_srgb,var(--color-violet)_30%,transparent)]",
   secondary: "bg-surface-highest text-violet-light hover:bg-surface-high",
   ghost: "bg-transparent hover:bg-surface-high text-on-surface",
   danger: "bg-red-500/10 hover:bg-red-500/20 text-red-400",
@@ -31,7 +31,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded font-body font-medium transition-colors duration-[120ms] disabled:opacity-50 disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded font-body font-medium transition-all duration-[120ms] cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${className}`}
       {...rest}
     >
       {loading && <Spinner size="sm" />}
