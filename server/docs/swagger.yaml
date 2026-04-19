@@ -114,8 +114,27 @@ definitions:
       content:
         type: string
     type: object
+  api.CreateMessageAttachmentRequest:
+    properties:
+      createdAt:
+        type: string
+      dataUrl:
+        type: string
+      fileName:
+        type: string
+      id:
+        type: string
+      mimeType:
+        type: string
+      sizeBytes:
+        type: integer
+    type: object
   api.CreateMessageRequest:
     properties:
+      attachments:
+        items:
+          $ref: '#/definitions/api.CreateMessageAttachmentRequest'
+        type: array
       content:
         type: string
       role:
@@ -131,6 +150,70 @@ definitions:
         type: string
       prompt:
         type: string
+    type: object
+  api.DAVCollection:
+    properties:
+      ctag:
+        type: string
+      description:
+        type: string
+      displayName:
+        type: string
+      path:
+        type: string
+    type: object
+  api.DAVDiscoveryInfo:
+    properties:
+      collections:
+        items:
+          $ref: '#/definitions/api.DAVCollection'
+        type: array
+      enabled:
+        type: boolean
+      entries:
+        items:
+          $ref: '#/definitions/api.DAVFileListItem'
+        type: array
+      error:
+        type: string
+      homeSet:
+        type: string
+    type: object
+  api.DAVFileListItem:
+    properties:
+      contentType:
+        type: string
+      displayName:
+        type: string
+      isCollection:
+        type: boolean
+      path:
+        type: string
+      size:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  api.DAVTestResult:
+    properties:
+      caldav:
+        $ref: '#/definitions/api.DAVDiscoveryInfo'
+      capabilities:
+        items:
+          type: string
+        type: array
+      carddav:
+        $ref: '#/definitions/api.DAVDiscoveryInfo'
+      error:
+        type: string
+      latencyMs:
+        type: integer
+      ok:
+        type: boolean
+      principal:
+        type: string
+      webdav:
+        $ref: '#/definitions/api.DAVDiscoveryInfo'
     type: object
   api.DeviceCapability:
     properties:
@@ -325,8 +408,27 @@ definitions:
       updatedAt:
         type: string
     type: object
+  api.MessageAttachmentDTO:
+    properties:
+      createdAt:
+        type: string
+      dataUrl:
+        type: string
+      fileName:
+        type: string
+      id:
+        type: string
+      mimeType:
+        type: string
+      sizeBytes:
+        type: integer
+    type: object
   api.MessageDTO:
     properties:
+      attachments:
+        items:
+          $ref: '#/definitions/api.MessageAttachmentDTO'
+        type: array
       content:
         type: string
       conversationId:
@@ -509,6 +611,25 @@ definitions:
         type: string
       updatedAt:
         type: string
+    type: object
+  api.TestDAVConnectionRequest:
+    properties:
+      caldavEnabled:
+        type: boolean
+      carddavEnabled:
+        type: boolean
+      enabled:
+        type: boolean
+      password:
+        type: string
+      pollIntervalSeconds:
+        type: integer
+      url:
+        type: string
+      username:
+        type: string
+      webdavEnabled:
+        type: boolean
     type: object
   api.TestEmailConnectionRequest:
     properties:
@@ -729,6 +850,29 @@ definitions:
       name:
         type: string
     type: object
+  configstore.DAVConfig:
+    properties:
+      caldavEnabled:
+        type: boolean
+      carddavEnabled:
+        type: boolean
+      enabled:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      pollIntervalSeconds:
+        type: integer
+      url:
+        type: string
+      username:
+        type: string
+      webdavEnabled:
+        type: boolean
+    type: object
   configstore.EmailAccountConfig:
     properties:
       address:
@@ -794,6 +938,10 @@ definitions:
       companionApps:
         items:
           $ref: '#/definitions/configstore.CompanionAppConfig'
+        type: array
+      dav:
+        items:
+          $ref: '#/definitions/configstore.DAVConfig'
         type: array
       defaultNotificationBotId:
         type: string
@@ -1124,6 +1272,26 @@ paths:
           schema:
             $ref: '#/definitions/api.ErrorResponse'
       summary: Log in with username and password
+      tags:
+      - auth
+  /v1/auth/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log out current session
       tags:
       - auth
   /v1/auth/refresh:
@@ -1495,6 +1663,37 @@ paths:
       summary: List tool calls for a conversation
       tags:
       - conversations
+  /v1/dav/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: DAV connection parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.TestDAVConnectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.DAVTestResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test a DAV connection
+      tags:
+      - dav
   /v1/devices:
     get:
       produces:

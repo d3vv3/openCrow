@@ -124,7 +124,12 @@ export default function AuthenticatedApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await endpoints.logout();
+    } catch {
+      // best-effort server invalidation; always clear local auth state
+    }
     clearTokens();
     if (onLogout) onLogout();
     else window.location.href = "/";
@@ -432,7 +437,7 @@ export default function AuthenticatedApp({
               onNavigate={closeSidebar}
             />
             <button
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
               className="flex w-full items-center gap-3 rounded-sm px-4 py-2.5 text-sm text-on-surface-variant transition-colors duration-150 hover:text-error"
             >
               <LogoutIcon />

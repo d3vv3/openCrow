@@ -56,16 +56,36 @@ type UpdateConversationRequest struct {
 }
 
 type MessageDTO struct {
-	ID             string `json:"id"`
-	ConversationID string `json:"conversationId"`
-	Role           string `json:"role"`
-	Content        string `json:"content"`
-	CreatedAt      string `json:"createdAt"`
+	ID             string                 `json:"id"`
+	ConversationID string                 `json:"conversationId"`
+	Role           string                 `json:"role"`
+	Content        string                 `json:"content"`
+	Attachments    []MessageAttachmentDTO `json:"attachments,omitempty"`
+	CreatedAt      string                 `json:"createdAt"`
+}
+
+type MessageAttachmentDTO struct {
+	ID        string `json:"id"`
+	FileName  string `json:"fileName"`
+	MimeType  string `json:"mimeType"`
+	SizeBytes int64  `json:"sizeBytes"`
+	DataURL   string `json:"dataUrl"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type CreateMessageAttachmentRequest struct {
+	ID        string `json:"id,omitempty"`
+	FileName  string `json:"fileName"`
+	MimeType  string `json:"mimeType"`
+	SizeBytes int64  `json:"sizeBytes,omitempty"`
+	DataURL   string `json:"dataUrl"`
+	CreatedAt string `json:"createdAt,omitempty"`
 }
 
 type CreateMessageRequest struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role        string                           `json:"role"`
+	Content     string                           `json:"content"`
+	Attachments []CreateMessageAttachmentRequest `json:"attachments,omitempty"`
 }
 
 type ToolCallRecord struct {

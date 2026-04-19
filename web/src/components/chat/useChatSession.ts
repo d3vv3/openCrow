@@ -14,6 +14,12 @@ import {
   type ToolCallRecord,
   type TokenUsage,
 } from "@/lib/api";
+import {
+  buildCompletionMessage,
+  toAttachmentPayload,
+  toOptimisticAttachments,
+  type PickedAttachmentFile,
+} from "./attachments";
 
 export function useChatSession({
   activeConversationId,
@@ -36,7 +42,7 @@ export function useChatSession({
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<{ file: File; dataUrl: string }[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<PickedAttachmentFile[]>([]);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
@@ -161,7 +167,7 @@ export function useChatSession({
 
   // ─── Send message ───
   const handleSend = useCallback(async () => {
-    if (!composing.trim() || sending) return;
+    if ((!composing.trim() && attachedFiles.length === 0) || sending) return;
     const userContent = composing.trim();
     // Snapshot and clear attachments
     const currentAttachments = attachedFiles;
@@ -170,12 +176,10 @@ export function useChatSession({
     if (composeRef.current) composeRef.current.style.height = "36px";
     setSending(true);
 
-    // Build full content (text + images as markdown)
-    const imageMarkdown = currentAttachments
-      .filter((a) => a.file.type.startsWith("image/"))
-      .map((a) => `\n![${a.file.name}](${a.dataUrl})`)
-      .join("");
-    const fullContent = userContent + imageMarkdown;
+    const fullContent = userContent;
+    const completionMessage = buildCompletionMessage(userContent, currentAttachments);
+    const attachmentPayload = toAttachmentPayload(currentAttachments);
+    const optimisticAttachments = toOptimisticAttachments(currentAttachments);
 
     let conversationId = activeConversationId;
     if (!conversationId) {
@@ -205,13 +209,19 @@ export function useChatSession({
       conversationId,
       role: "user",
       content: fullContent,
+      attachments: optimisticAttachments,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimisticUser]);
 
     try {
       // Persist user message
-      const savedUser = await endpoints.createMessage(conversationId, "user", fullContent);
+      const savedUser = await endpoints.createMessage(
+        conversationId,
+        "user",
+        fullContent,
+        attachmentPayload,
+      );
       setMessages((prev) => prev.map((m) => (m.id === optimisticUser.id ? savedUser : m)));
 
       const providerOrder = selectedProvider ? [selectedProvider] : undefined;
@@ -231,9 +241,10 @@ export function useChatSession({
       ]);
 
       let fullOutput = "";
+      const liveToolIdsByName = new Map<string, string>();
       const finalOutput = await endpoints.streamComplete(
         conversationId,
-        fullContent,
+        completionMessage,
         (token: string) => {
           fullOutput += token;
           setMessages((prev) =>
@@ -242,11 +253,13 @@ export function useChatSession({
         },
         providerOrder,
         (name: string, args: string, kind?: "TOOL" | "MCP") => {
+          const liveId = `live-${Date.now()}-${Math.random()}`;
+          liveToolIdsByName.set(name, liveId);
           // Add optimistic live entry
           setToolCallHistory((prev) => [
             ...prev,
             {
-              id: `live-${Date.now()}-${Math.random()}`,
+              id: liveId,
               toolName: name,
               kind: kind ?? "TOOL",
               arguments: (() => {
@@ -259,6 +272,21 @@ export function useChatSession({
               createdAt: new Date().toISOString(),
             },
           ]);
+        },
+        (name: string, result: string, isError?: boolean) => {
+          const liveId = liveToolIdsByName.get(name);
+          if (!liveId) return;
+          setToolCallHistory((prev) =>
+            prev.map((tc) =>
+              tc.id === liveId
+                ? {
+                    ...tc,
+                    output: result,
+                    error: isError ? result || "tool failed" : undefined,
+                  }
+                : tc,
+            ),
+          );
         },
         (usage: TokenUsage) => {
           setLastUsage(usage);
@@ -279,14 +307,21 @@ export function useChatSession({
           })
           .catch(() => {});
       }
-    } catch {
+    } catch (err) {
+      console.error("Chat send failed", err);
+      const details =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message?: unknown }).message ?? "")
+          : "";
       setMessages((prev) => [
         ...prev,
         {
           id: `err-${Date.now()}`,
           conversationId,
           role: "system",
-          content: "Failed to get a response. Please try again.",
+          content: details
+            ? `Failed to get a response: ${details}`
+            : "Failed to get a response. Please try again.",
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -316,6 +351,7 @@ export function useChatSession({
       reader.readAsDataURL(file);
     });
     e.target.value = "";
+    composeRef.current?.focus();
   }, []);
 
   const removeAttachment = useCallback((index: number) => {

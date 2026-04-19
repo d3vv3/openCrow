@@ -9,6 +9,7 @@ import type {
   MemoryEntry,
   ScheduleEntry,
   MCPServerConfig,
+  DAVConfig,
 } from "@/lib/api";
 
 // ─── Shared Types ───
@@ -21,6 +22,7 @@ export type ProviderProbeStatus = { ok: boolean; latencyMs: number; error?: stri
 export const TABS = [
   { key: "email", label: "Email" },
   { key: "servers", label: "Servers" },
+  { key: "dav", label: "DAV" },
   { key: "channels", label: "Channels" },
   { key: "devices", label: "Devices" },
   { key: "tools", label: "Tools" },
@@ -135,6 +137,19 @@ export const emptyMCPServer: MCPServerConfig = {
   url: "",
   headers: {},
   enabled: true,
+};
+
+export const emptyDAVConfig: DAVConfig = {
+  id: "",
+  name: "",
+  url: "",
+  username: "",
+  password: "",
+  enabled: false,
+  webdavEnabled: true,
+  caldavEnabled: true,
+  carddavEnabled: true,
+  pollIntervalSeconds: 900,
 };
 
 // ─── Helpers ───

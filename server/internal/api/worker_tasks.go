@@ -144,10 +144,10 @@ func (s *Server) executeScheduledTask(ctx context.Context, taskID, userID, descr
 		if execErr != nil {
 			resultContent = "Task failed: " + execErr.Error()
 		}
-		if _, msgErr := s.createMessage(taskCtx, userID, conv.ID, "user", prompt); msgErr != nil {
+		if _, msgErr := s.createMessage(taskCtx, userID, conv.ID, "user", prompt, nil); msgErr != nil {
 			s.wlog("task-worker", "[task-worker] failed to insert user message for task %s: %v", taskID, msgErr)
 		}
-		if _, msgErr := s.createMessage(taskCtx, userID, conv.ID, "assistant", resultContent); msgErr != nil {
+		if _, msgErr := s.createMessage(taskCtx, userID, conv.ID, "assistant", resultContent, nil); msgErr != nil {
 			s.wlog("task-worker", "[task-worker] failed to insert assistant message for task %s: %v", taskID, msgErr)
 		}
 		for _, tc := range result.Trace.ToolCalls {

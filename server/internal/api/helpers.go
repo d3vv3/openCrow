@@ -201,12 +201,10 @@ func (s *Server) buildSystemPrompt(ctx context.Context, userID string, cfg *conf
 		}
 	}
 
-	// Append configured MCP servers and discovered tool capabilities.
+	// Append configured MCP servers (names only; do not discover tools per-request).
 	if cfg != nil && len(cfg.MCP.Servers) > 0 {
 		sb.WriteString("\n\n## MCP Servers\n")
-		sb.WriteString("Configured MCP servers and their discovered capabilities.\n")
-		sb.WriteString("When an MCP tool is available, call it directly by its tool name and provide arguments that match the listed input schema.\n")
-		sb.WriteString("Do not invent MCP tools that are not listed here.\n\n")
+		sb.WriteString("Configured MCP server connections. Use available MCP tools when needed; do not invent MCP tools.\n\n")
 		for _, srv := range cfg.MCP.Servers {
 			name := strings.TrimSpace(srv.Name)
 			if name == "" {
@@ -216,39 +214,13 @@ func (s *Server) buildSystemPrompt(ctx context.Context, userID string, cfg *conf
 				sb.WriteString(fmt.Sprintf("- **%s** (`%s`) -- disabled\n", name, strings.TrimSpace(srv.URL)))
 				continue
 			}
+
 			url := strings.TrimSpace(srv.URL)
 			if url == "" {
-				sb.WriteString(fmt.Sprintf("- **%s** -- enabled but URL is empty\n", name))
+				sb.WriteString(fmt.Sprintf("- **%s** -- enabled\n", name))
 				continue
 			}
-
-			sb.WriteString(fmt.Sprintf("- **%s** (`%s`)\n", name, url))
-
-			mcpCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			tools, err := fetchMCPTools(mcpCtx, url, srv.Headers)
-			cancel()
-			if err != nil {
-				sb.WriteString(fmt.Sprintf("  - tools: unavailable (%s)\n", truncateOutput(err.Error(), 180)))
-				continue
-			}
-			if len(tools) == 0 {
-				sb.WriteString("  - tools: none discovered\n")
-				continue
-			}
-			for _, t := range tools {
-				desc := strings.TrimSpace(t.Description)
-				if desc == "" {
-					sb.WriteString(fmt.Sprintf("  - tool `%s`\n", t.Name))
-				} else {
-					sb.WriteString(fmt.Sprintf("  - tool `%s`: %s\n", t.Name, truncateOutput(desc, 220)))
-				}
-				if len(t.InputSchema) > 0 {
-					schemaJSON, _ := json.Marshal(t.InputSchema)
-					if len(schemaJSON) > 0 {
-						sb.WriteString(fmt.Sprintf("    - input_schema: %s\n", truncateOutput(string(schemaJSON), 420)))
-					}
-				}
-			}
+			sb.WriteString(fmt.Sprintf("- **%s** (`%s`) -- enabled\n", name, url))
 		}
 	}
 

@@ -247,6 +247,20 @@ func normalize(cfg UserConfig) UserConfig {
 	if cfg.Integrations.SSHServers == nil {
 		cfg.Integrations.SSHServers = []SSHServerConfig{}
 	}
+	if cfg.Integrations.DAV == nil {
+		cfg.Integrations.DAV = []DAVConfig{}
+	}
+	for i := range cfg.Integrations.DAV {
+		if cfg.Integrations.DAV[i].ID == "" {
+			cfg.Integrations.DAV[i].ID = uuid.NewString()
+		}
+		if strings.TrimSpace(cfg.Integrations.DAV[i].Name) == "" {
+			cfg.Integrations.DAV[i].Name = fmt.Sprintf("DAV %d", i+1)
+		}
+		if cfg.Integrations.DAV[i].PollIntervalSeconds <= 0 {
+			cfg.Integrations.DAV[i].PollIntervalSeconds = 900
+		}
+	}
 	for i := range cfg.Integrations.SSHServers {
 		if cfg.Integrations.SSHServers[i].ID == "" {
 			cfg.Integrations.SSHServers[i].ID = uuid.NewString()

@@ -69,7 +69,7 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Save the user message
-	if _, err := s.createMessage(ctx, userID, req.ConversationID, "user", message); err != nil {
+	if _, err := s.createMessage(ctx, userID, req.ConversationID, "user", message, nil); err != nil {
 		writeError(w, http.StatusInternalServerError, "unable to save user message")
 		return
 	}
@@ -108,7 +108,7 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Save the assistant response
-	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", result.Output); err != nil {
+	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", result.Output, nil); err != nil {
 		log.Printf("warn: unable to save assistant message: %v", err)
 	}
 
@@ -388,7 +388,7 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", fullOutput); err != nil {
+	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", fullOutput, nil); err != nil {
 		log.Printf("warn: unable to save assistant message: %v", err)
 	}
 

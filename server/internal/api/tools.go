@@ -72,6 +72,12 @@ func isBuiltinToolName(name string) bool {
 		"list_device_tasks", "get_device_capabilities",
 		"setup_email", "remove_email", "check_email", "read_email", "reply_email", "compose_email", "search_email",
 		"send_notification", "setup_telegram_bot",
+		"setup_dav", "list_dav_integrations", "test_dav_connection", "list_webdav_files",
+		"list_caldav_calendars", "list_carddav_address_books",
+		"create_caldav_event", "delete_caldav_event",
+		"create_carddav_contact", "delete_carddav_contact",
+		"list_caldav_events", "get_caldav_event", "search_caldav_events",
+		"list_carddav_contacts", "get_carddav_contact", "search_carddav_contacts",
 		"execute_shell_command", "manage_process",
 		"ssh_execute",
 		"transcribe_audio",
@@ -187,6 +193,55 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 	// ── Channels ─────────────────────────────────────────────────────
 	case "setup_telegram_bot":
 		return s.toolSetupTelegramBot(ctx, userID, args)
+
+	// ── DAV ──────────────────────────────────────────────────────────
+	case "setup_dav":
+		return s.toolSetupDAV(ctx, userID, args)
+
+	case "list_dav_integrations":
+		return s.toolListDAVIntegrations(ctx, userID, args)
+
+	case "test_dav_connection":
+		return s.toolTestDAVConnection(ctx, userID, args)
+
+	case "list_webdav_files":
+		return s.toolListWebDAVFiles(ctx, userID, args)
+
+	case "list_caldav_calendars":
+		return s.toolListCalDAVCalendars(ctx, userID, args)
+
+	case "list_carddav_address_books":
+		return s.toolListCardDAVAddressBooks(ctx, userID, args)
+
+	case "create_caldav_event":
+		return s.toolCreateCalDAVEvent(ctx, userID, args)
+
+	case "delete_caldav_event":
+		return s.toolDeleteCalDAVEvent(ctx, userID, args)
+
+	case "create_carddav_contact":
+		return s.toolCreateCardDAVContact(ctx, userID, args)
+
+	case "delete_carddav_contact":
+		return s.toolDeleteCardDAVContact(ctx, userID, args)
+
+	case "list_caldav_events":
+		return s.toolListCalDAVEvents(ctx, userID, args)
+
+	case "get_caldav_event":
+		return s.toolGetCalDAVEvent(ctx, userID, args)
+
+	case "search_caldav_events":
+		return s.toolSearchCalDAVEvents(ctx, userID, args)
+
+	case "list_carddav_contacts":
+		return s.toolListCardDAVContacts(ctx, userID, args)
+
+	case "get_carddav_contact":
+		return s.toolGetCardDAVContact(ctx, userID, args)
+
+	case "search_carddav_contacts":
+		return s.toolSearchCardDAVContacts(ctx, userID, args)
 
 	// ── Shell ────────────────────────────────────────────────────────
 	case "execute_shell_command":

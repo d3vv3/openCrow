@@ -83,3 +83,23 @@ export function TerminalIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function FileIcon(props: IconProps) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" {...props}>
+      <path
+        d="M4 1.5h5L12.5 5v9.5a1 1 0 01-1 1H4a1 1 0 01-1-1v-12a1 1 0 011-1z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path d="M9 1.5V5h3.5" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path
+        d="M5.5 8.5h5M5.5 10.5h5M5.5 12.5h3.5"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

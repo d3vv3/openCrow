@@ -37,6 +37,7 @@ import { McpServerCard } from "@/components/config/McpServerCard";
 import { EmailTab } from "@/components/config/EmailTab";
 import { SchedulesTab } from "@/components/config/SchedulesTab";
 import { ServersTab } from "@/components/config/ServersTab";
+import { DAVTab } from "@/components/config/DAVTab";
 import { TelegramTab } from "@/components/config/TelegramTab";
 import { DevicesTab } from "@/components/config/DevicesTab";
 
@@ -777,6 +778,16 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
       saveStatus={saveStatus}
     />
   );
+  const renderDAV = () => (
+    <DAVTab
+      config={config}
+      updateConfig={updateConfig}
+      saving={saving}
+      saveFullConfig={saveFullConfig}
+      saveStatus={saveStatus}
+      isActive={activeTab === "dav"}
+    />
+  );
   const renderTelegram = () => (
     <TelegramTab
       config={config}
@@ -903,6 +914,7 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
   const panels: Record<string, () => ReactElement> = {
     email: renderEmail,
     servers: renderServers,
+    dav: renderDAV,
     channels: renderTelegram,
     devices: renderDevices,
     tools: renderTools,

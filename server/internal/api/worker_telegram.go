@@ -299,10 +299,10 @@ func (s *Server) pollTelegramBot(ctx context.Context, userID string, bot configs
 
 		// Persist the turn to the DB so history is available next time
 		if convID != "" {
-			if _, dbErr := s.createMessage(ctx, userID, convID, "user", rawPrompt); dbErr != nil {
+			if _, dbErr := s.createMessage(ctx, userID, convID, "user", rawPrompt, nil); dbErr != nil {
 				s.wlog("telegram-worker", "[telegram-worker] failed to persist user message: %v", dbErr)
 			}
-			if _, dbErr := s.createMessage(ctx, userID, convID, "assistant", reply); dbErr != nil {
+			if _, dbErr := s.createMessage(ctx, userID, convID, "assistant", reply, nil); dbErr != nil {
 				s.wlog("telegram-worker", "[telegram-worker] failed to persist assistant message: %v", dbErr)
 			}
 			for _, tc := range orchResult.Trace.ToolCalls {

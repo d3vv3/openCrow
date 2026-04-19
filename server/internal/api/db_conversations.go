@@ -142,6 +142,7 @@ ORDER BY m.created_at ASC;
 	defer rows.Close()
 
 	var result []MessageDTO
+	messageOrder := make([]string, 0)
 	for rows.Next() {
 		var item MessageDTO
 		var createdAt time.Time
@@ -150,16 +151,73 @@ ORDER BY m.created_at ASC;
 		}
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		result = append(result, item)
+		messageOrder = append(messageOrder, item.ID)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(messageOrder) == 0 {
+		return result, nil
+	}
+
+	const attachmentsQ = `
+SELECT a.id::text, a.message_id::text, a.file_name, a.mime_type, a.size_bytes, a.data_url, a.created_at
+FROM message_attachments a
+JOIN messages m ON m.id = a.message_id
+JOIN conversations c ON c.id = m.conversation_id
+WHERE m.conversation_id = $1::uuid AND c.user_id = $2::uuid
+ORDER BY a.created_at ASC;
+`
+	attachmentRows, err := s.db.Query(ctx, attachmentsQ, conversationID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer attachmentRows.Close()
+
+	attachmentsByMessageID := make(map[string][]MessageAttachmentDTO)
+	for attachmentRows.Next() {
+		var messageID string
+		var attachment MessageAttachmentDTO
+		var createdAt time.Time
+		if err := attachmentRows.Scan(
+			&attachment.ID,
+			&messageID,
+			&attachment.FileName,
+			&attachment.MimeType,
+			&attachment.SizeBytes,
+			&attachment.DataURL,
+			&createdAt,
+		); err != nil {
+			return nil, err
+		}
+		attachment.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+		attachmentsByMessageID[messageID] = append(attachmentsByMessageID[messageID], attachment)
+	}
+	if err := attachmentRows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range result {
+		result[i].Attachments = attachmentsByMessageID[result[i].ID]
+	}
+
+	return result, nil
 }
 
-func (s *Server) createMessage(ctx context.Context, userID, conversationID, role, content string) (MessageDTO, error) {
+func (s *Server) createMessage(ctx context.Context, userID, conversationID, role, content string, attachments []CreateMessageAttachmentRequest) (MessageDTO, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return MessageDTO{}, err
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
 	const ownershipQ = `
 SELECT 1 FROM conversations WHERE id = $1::uuid AND user_id = $2::uuid;
 `
 	var exists int
-	if err := s.db.QueryRow(ctx, ownershipQ, conversationID, userID).Scan(&exists); err != nil {
+	if err := tx.QueryRow(ctx, ownershipQ, conversationID, userID).Scan(&exists); err != nil {
 		return MessageDTO{}, err
 	}
 
@@ -171,17 +229,51 @@ RETURNING id::text, conversation_id::text, role, content, created_at;
 
 	var item MessageDTO
 	var createdAt time.Time
-	err := s.db.QueryRow(ctx, insertQ, conversationID, role, content).Scan(&item.ID, &item.ConversationID, &item.Role, &item.Content, &createdAt)
+	err = tx.QueryRow(ctx, insertQ, conversationID, role, content).Scan(&item.ID, &item.ConversationID, &item.Role, &item.Content, &createdAt)
 	if err != nil {
 		return MessageDTO{}, err
 	}
+	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+
+	for _, attachment := range attachments {
+		const insertAttachmentQ = `
+INSERT INTO message_attachments (message_id, file_name, mime_type, size_bytes, data_url)
+VALUES ($1::uuid, $2, $3, $4, $5)
+RETURNING id::text, file_name, mime_type, size_bytes, data_url, created_at;
+`
+		var added MessageAttachmentDTO
+		var attachmentCreatedAt time.Time
+		if err := tx.QueryRow(
+			ctx,
+			insertAttachmentQ,
+			item.ID,
+			attachment.FileName,
+			attachment.MimeType,
+			attachment.SizeBytes,
+			attachment.DataURL,
+		).Scan(
+			&added.ID,
+			&added.FileName,
+			&added.MimeType,
+			&added.SizeBytes,
+			&added.DataURL,
+			&attachmentCreatedAt,
+		); err != nil {
+			return MessageDTO{}, err
+		}
+		added.CreatedAt = attachmentCreatedAt.UTC().Format(time.RFC3339)
+		item.Attachments = append(item.Attachments, added)
+	}
 
 	const updateConversationQ = `UPDATE conversations SET updated_at = NOW() WHERE id = $1::uuid AND user_id = $2::uuid;`
-	if _, err := s.db.Exec(ctx, updateConversationQ, conversationID, userID); err != nil {
+	if _, err := tx.Exec(ctx, updateConversationQ, conversationID, userID); err != nil {
 		return MessageDTO{}, err
 	}
 
-	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	if err := tx.Commit(ctx); err != nil {
+		return MessageDTO{}, err
+	}
+
 	return item, nil
 }
 

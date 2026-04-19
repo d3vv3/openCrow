@@ -2,11 +2,42 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
+
+func normalizeCreateMessageInput(req CreateMessageRequest) (string, string, []CreateMessageAttachmentRequest, error) {
+	role := strings.TrimSpace(strings.ToLower(req.Role))
+	content := strings.TrimSpace(req.Content)
+	if role == "" || role == "assistant" || (content == "" && len(req.Attachments) == 0) {
+		return "", "", nil, fmt.Errorf("role required and content or attachments required")
+	}
+	if role != "system" && role != "user" && role != "assistant" && role != "tool" {
+		return "", "", nil, fmt.Errorf("invalid role")
+	}
+
+	attachments := make([]CreateMessageAttachmentRequest, 0, len(req.Attachments))
+	for _, attachment := range req.Attachments {
+		attachment.FileName = strings.TrimSpace(attachment.FileName)
+		attachment.MimeType = strings.TrimSpace(attachment.MimeType)
+		attachment.DataURL = strings.TrimSpace(attachment.DataURL)
+		if attachment.FileName == "" || attachment.MimeType == "" || attachment.DataURL == "" {
+			return "", "", nil, fmt.Errorf("attachment fileName, mimeType, and dataUrl are required")
+		}
+		if !strings.HasPrefix(strings.ToLower(attachment.DataURL), "data:") {
+			return "", "", nil, fmt.Errorf("attachment dataUrl must be a data URL")
+		}
+		if attachment.SizeBytes < 0 {
+			attachment.SizeBytes = 0
+		}
+		attachments = append(attachments, attachment)
+	}
+
+	return role, content, attachments, nil
+}
 
 // @Summary List all conversations for the current user
 // @Tags    conversations
@@ -202,18 +233,13 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role := strings.TrimSpace(strings.ToLower(req.Role))
-	content := strings.TrimSpace(req.Content)
-	if role == "" || content == "" {
-		writeError(w, http.StatusBadRequest, "role and content required")
-		return
-	}
-	if role != "system" && role != "user" && role != "assistant" && role != "tool" {
-		writeError(w, http.StatusBadRequest, "invalid role")
+	role, content, attachments, err := normalizeCreateMessageInput(req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	message, err := s.createMessage(r.Context(), userID, conversationID, role, content)
+	message, err := s.createMessage(r.Context(), userID, conversationID, role, content, attachments)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "conversation not found")

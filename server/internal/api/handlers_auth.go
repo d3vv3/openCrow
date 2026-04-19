@@ -250,6 +250,40 @@ func clientTimezoneFromContext(ctx context.Context) string {
 	return strings.TrimSpace(tz)
 }
 
+func sessionIDFromContext(ctx context.Context) string {
+	sessionID, _ := ctx.Value(sessionIDContextKey).(string)
+	return strings.TrimSpace(sessionID)
+}
+
+// @Summary Log out current session
+// @Tags    auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]bool
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/auth/logout [post]
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := userIDFromContext(ctx)
+	sessionID := sessionIDFromContext(ctx)
+	if userID == "" || sessionID == "" {
+		writeError(w, http.StatusUnauthorized, "invalid session")
+		return
+	}
+
+	deleted, err := s.deleteUserSession(ctx, userID, sessionID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "unable to logout")
+		return
+	}
+	if !deleted {
+		writeError(w, http.StatusUnauthorized, "session not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"loggedOut": true})
+}
+
 // @Summary Create tokens for a new device session
 // @Tags    auth
 // @Security BearerAuth

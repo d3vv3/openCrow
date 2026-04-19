@@ -3,6 +3,7 @@
 import { type KeyboardEvent } from "react";
 import { type ConversationDTO, type MessageDTO, type ToolCallRecord } from "@/lib/api";
 import { Spinner } from "@/components/ui/Spinner";
+import { FileIcon } from "@/components/ui/icons";
 
 // ─── Extracted chat sub-components ───
 import {
@@ -136,10 +137,28 @@ export default function ChatShell({
                 const timeline: TimelineItem[] = [
                   ...messages.map((m, idx) => ({ kind: "message" as const, item: m, idx })),
                   ...toolCallHistory.map((t, idx) => ({ kind: "tool" as const, item: t, idx })),
-                ].sort(
-                  (a, b) =>
-                    new Date(a.item.createdAt).getTime() - new Date(b.item.createdAt).getTime(),
-                );
+                ].sort((a, b) => {
+                  // Live tool calls always appear before the streaming assistant message
+                  const aIsStreaming = a.kind === "message" && a.item.id === streamingMsgId;
+                  const bIsStreaming = b.kind === "message" && b.item.id === streamingMsgId;
+                  const aIsLiveTool = a.kind === "tool" && a.item.id.startsWith("live-");
+                  const bIsLiveTool = b.kind === "tool" && b.item.id.startsWith("live-");
+                  if (aIsStreaming && bIsLiveTool) return 1;
+                  if (bIsStreaming && aIsLiveTool) return -1;
+
+                  const at = new Date(a.item.createdAt).getTime();
+                  const bt = new Date(b.item.createdAt).getTime();
+                  if (at !== bt) return at - bt;
+
+                  const rank = (entry: TimelineItem) => {
+                    if (entry.kind === "tool") return 0;
+                    if (entry.item.role === "assistant") return 2;
+                    return 1;
+                  };
+                  const byRank = rank(a) - rank(b);
+                  if (byRank !== 0) return byRank;
+                  return a.idx - b.idx;
+                });
 
                 return timeline.map((entry) => {
                   if (entry.kind === "tool") {
@@ -251,7 +270,12 @@ export default function ChatShell({
                             alt={att.file.name}
                             className="h-8 w-8 rounded object-cover"
                           />
-                        ) : null}
+                        ) : (
+                          <FileIcon
+                            className="h-4 w-4 shrink-0 text-on-surface-variant"
+                            aria-hidden="true"
+                          />
+                        )}
                         <span className="truncate max-w-[120px]">{att.file.name}</span>
                         <button
                           onClick={() => removeAttachment(fi)}

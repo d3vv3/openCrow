@@ -124,6 +124,39 @@
                 }
             }
         },
+        "/v1/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log out current session",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/auth/refresh": {
             "post": {
                 "consumes": [
@@ -693,6 +726,56 @@
                                     "$ref": "#/definitions/api.ToolCallRecord"
                                 }
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/dav/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dav"
+                ],
+                "summary": "Test a DAV connection",
+                "parameters": [
+                    {
+                        "description": "DAV connection parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.TestDAVConnectionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.DAVTestResult"
                         }
                     },
                     "400": {
@@ -3407,9 +3490,38 @@
                 }
             }
         },
+        "api.CreateMessageAttachmentRequest": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "dataUrl": {
+                    "type": "string"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mimeType": {
+                    "type": "string"
+                },
+                "sizeBytes": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.CreateMessageRequest": {
             "type": "object",
             "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.CreateMessageAttachmentRequest"
+                    }
+                },
                 "content": {
                     "type": "string"
                 },
@@ -3432,6 +3544,104 @@
                 },
                 "prompt": {
                     "type": "string"
+                }
+            }
+        },
+        "api.DAVCollection": {
+            "type": "object",
+            "properties": {
+                "ctag": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.DAVDiscoveryInfo": {
+            "type": "object",
+            "properties": {
+                "collections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.DAVCollection"
+                    }
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.DAVFileListItem"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                },
+                "homeSet": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.DAVFileListItem": {
+            "type": "object",
+            "properties": {
+                "contentType": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "isCollection": {
+                    "type": "boolean"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.DAVTestResult": {
+            "type": "object",
+            "properties": {
+                "caldav": {
+                    "$ref": "#/definitions/api.DAVDiscoveryInfo"
+                },
+                "capabilities": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "carddav": {
+                    "$ref": "#/definitions/api.DAVDiscoveryInfo"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latencyMs": {
+                    "type": "integer"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "principal": {
+                    "type": "string"
+                },
+                "webdav": {
+                    "$ref": "#/definitions/api.DAVDiscoveryInfo"
                 }
             }
         },
@@ -3732,9 +3942,38 @@
                 }
             }
         },
+        "api.MessageAttachmentDTO": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "dataUrl": {
+                    "type": "string"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mimeType": {
+                    "type": "string"
+                },
+                "sizeBytes": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.MessageDTO": {
             "type": "object",
             "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.MessageAttachmentDTO"
+                    }
+                },
                 "content": {
                     "type": "string"
                 },
@@ -4014,6 +4253,35 @@
                 },
                 "updatedAt": {
                     "type": "string"
+                }
+            }
+        },
+        "api.TestDAVConnectionRequest": {
+            "type": "object",
+            "properties": {
+                "caldavEnabled": {
+                    "type": "boolean"
+                },
+                "carddavEnabled": {
+                    "type": "boolean"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "pollIntervalSeconds": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "webdavEnabled": {
+                    "type": "boolean"
                 }
             }
         },
@@ -4354,6 +4622,41 @@
                 }
             }
         },
+        "configstore.DAVConfig": {
+            "type": "object",
+            "properties": {
+                "caldavEnabled": {
+                    "type": "boolean"
+                },
+                "carddavEnabled": {
+                    "type": "boolean"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "pollIntervalSeconds": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "webdavEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "configstore.EmailAccountConfig": {
             "type": "object",
             "properties": {
@@ -4453,6 +4756,12 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/configstore.CompanionAppConfig"
+                    }
+                },
+                "dav": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/configstore.DAVConfig"
                     }
                 },
                 "defaultNotificationBotId": {

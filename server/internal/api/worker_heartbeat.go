@@ -146,14 +146,14 @@ func (s *Server) executeHeartbeat(ctx context.Context, userID string, intervalSe
 			title = title[:100] + "..."
 		}
 		if conv, convErr := s.createConversation(hbCtx, userID, title); convErr == nil {
-			if _, msgErr := s.createMessage(hbCtx, userID, conv.ID, "user", prompt); msgErr != nil {
+			if _, msgErr := s.createMessage(hbCtx, userID, conv.ID, "user", prompt, nil); msgErr != nil {
 				s.wlog("heartbeat-worker", "[heartbeat-worker] failed to insert heartbeat prompt for user %s: %v", userID, msgErr)
 			}
 			resultContent := message
 			if strings.TrimSpace(resultContent) == "" {
 				resultContent = "Heartbeat requires attention"
 			}
-			if _, msgErr := s.createMessage(hbCtx, userID, conv.ID, "assistant", resultContent); msgErr != nil {
+			if _, msgErr := s.createMessage(hbCtx, userID, conv.ID, "assistant", resultContent, nil); msgErr != nil {
 				s.wlog("heartbeat-worker", "[heartbeat-worker] failed to insert heartbeat result for user %s: %v", userID, msgErr)
 			}
 			for _, tc := range result.Trace.ToolCalls {

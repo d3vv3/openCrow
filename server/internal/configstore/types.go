@@ -1,6 +1,9 @@
 package configstore
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type rootConfig struct {
 	Version   int                   `json:"version"`
@@ -38,8 +41,111 @@ type IntegrationsConfig struct {
 	EmailAccounts            []EmailAccountConfig  `json:"emailAccounts"`
 	TelegramBots             []TelegramBotConfig   `json:"telegramBots"`
 	SSHServers               []SSHServerConfig     `json:"sshServers"`
+	DAV                      []DAVConfig           `json:"dav"`
 	CompanionApps            []CompanionAppConfig  `json:"companionApps"`
 	DefaultNotificationBotID string                `json:"defaultNotificationBotId,omitempty"`
+}
+
+type DAVConfig struct {
+	ID                  string `json:"id"`
+	Name                string `json:"name"`
+	URL                 string `json:"url"`
+	Username            string `json:"username"`
+	Password            string `json:"password"`
+	Enabled             bool   `json:"enabled"`
+	WebDAVEnabled       bool   `json:"webdavEnabled"`
+	CalDAVEnabled       bool   `json:"caldavEnabled"`
+	CardDAVEnabled      bool   `json:"carddavEnabled"`
+	PollIntervalSeconds int    `json:"pollIntervalSeconds"`
+}
+
+func (c *IntegrationsConfig) UnmarshalJSON(data []byte) error {
+	type integrationsAlias struct {
+		EmailAccounts            []EmailAccountConfig `json:"emailAccounts"`
+		TelegramBots             []TelegramBotConfig  `json:"telegramBots"`
+		SSHServers               []SSHServerConfig    `json:"sshServers"`
+		DAV                      json.RawMessage      `json:"dav"`
+		CompanionApps            []CompanionAppConfig `json:"companionApps"`
+		DefaultNotificationBotID string               `json:"defaultNotificationBotId,omitempty"`
+	}
+
+	var aux integrationsAlias
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	c.EmailAccounts = aux.EmailAccounts
+	c.TelegramBots = aux.TelegramBots
+	c.SSHServers = aux.SSHServers
+	c.CompanionApps = aux.CompanionApps
+	c.DefaultNotificationBotID = aux.DefaultNotificationBotID
+
+	if len(aux.DAV) == 0 || string(aux.DAV) == "null" {
+		c.DAV = nil
+		return nil
+	}
+
+	type davWire struct {
+		ID                  string `json:"id"`
+		Name                string `json:"name"`
+		URL                 string `json:"url"`
+		Username            string `json:"username"`
+		Password            string `json:"password"`
+		Enabled             *bool  `json:"enabled"`
+		WebDAVEnabled       *bool  `json:"webdavEnabled"`
+		CalDAVEnabled       *bool  `json:"caldavEnabled"`
+		CardDAVEnabled      *bool  `json:"carddavEnabled"`
+		PollIntervalSeconds int    `json:"pollIntervalSeconds"`
+	}
+	fromWire := func(w davWire) DAVConfig {
+		enabled := false
+		if w.Enabled != nil {
+			enabled = *w.Enabled
+		}
+		webdavEnabled := true
+		if w.WebDAVEnabled != nil {
+			webdavEnabled = *w.WebDAVEnabled
+		}
+		caldavEnabled := true
+		if w.CalDAVEnabled != nil {
+			caldavEnabled = *w.CalDAVEnabled
+		}
+		carddavEnabled := true
+		if w.CardDAVEnabled != nil {
+			carddavEnabled = *w.CardDAVEnabled
+		}
+		return DAVConfig{
+			ID:                  w.ID,
+			Name:                w.Name,
+			URL:                 w.URL,
+			Username:            w.Username,
+			Password:            w.Password,
+			Enabled:             enabled,
+			WebDAVEnabled:       webdavEnabled,
+			CalDAVEnabled:       caldavEnabled,
+			CardDAVEnabled:      carddavEnabled,
+			PollIntervalSeconds: w.PollIntervalSeconds,
+		}
+	}
+
+	if aux.DAV[0] == '[' {
+		var arr []davWire
+		if err := json.Unmarshal(aux.DAV, &arr); err != nil {
+			return err
+		}
+		c.DAV = make([]DAVConfig, 0, len(arr))
+		for _, d := range arr {
+			c.DAV = append(c.DAV, fromWire(d))
+		}
+		return nil
+	}
+
+	var single davWire
+	if err := json.Unmarshal(aux.DAV, &single); err != nil {
+		return err
+	}
+	c.DAV = []DAVConfig{fromWire(single)}
+	return nil
 }
 
 type CompanionAppConfig struct {

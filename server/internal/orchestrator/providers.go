@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -117,44 +118,84 @@ func NewOpenAIProvider(name, baseURL, apiKey, model string) *OpenAIProvider {
 func (p *OpenAIProvider) Name() string { return p.name }
 
 var markdownImagePattern = regexp.MustCompile(`!\[(.*?)\]\(((?:data:image/[^)]+)|(?:https?://[^)]+))\)`)
+var markdownDataFilePattern = regexp.MustCompile(`\[(.*?)\]\((data:[^)]+)\)`)
+
+type openAIContentSpan struct {
+	start int
+	end   int
+	kind  string
+	url   string
+}
 
 func buildOpenAIContent(role, content string) any {
 	if role != "user" {
 		return content
 	}
-	matches := markdownImagePattern.FindAllStringSubmatchIndex(content, -1)
-	if len(matches) == 0 {
-		return content
-	}
-	parts := make([]map[string]any, 0, len(matches)*2+1)
-	last := 0
-	for _, m := range matches {
+	spans := make([]openAIContentSpan, 0)
+	imageMatches := markdownImagePattern.FindAllStringSubmatchIndex(content, -1)
+	for _, m := range imageMatches {
 		if len(m) < 6 {
 			continue
 		}
 		fullStart, fullEnd := m[0], m[1]
-		altStart, altEnd := m[2], m[3]
 		urlStart, urlEnd := m[4], m[5]
+		spans = append(spans, openAIContentSpan{start: fullStart, end: fullEnd, kind: "image", url: content[urlStart:urlEnd]})
+	}
+	fileMatches := markdownDataFilePattern.FindAllStringSubmatchIndex(content, -1)
+	for _, m := range fileMatches {
+		if len(m) < 6 {
+			continue
+		}
+		fullStart, fullEnd := m[0], m[1]
+		if fullStart > 0 && content[fullStart-1] == '!' {
+			// Skip image markdown; handled by markdownImagePattern.
+			continue
+		}
+		urlStart, urlEnd := m[4], m[5]
+		url := content[urlStart:urlEnd]
+		if strings.HasPrefix(strings.ToLower(url), "data:image/") {
+			continue
+		}
+		spans = append(spans, openAIContentSpan{start: fullStart, end: fullEnd, kind: "file", url: url})
+	}
+	if len(spans) == 0 {
+		return content
+	}
+	sort.Slice(spans, func(i, j int) bool { return spans[i].start < spans[j].start })
+
+	parts := make([]map[string]any, 0, len(spans)*2+1)
+	last := 0
+	for _, span := range spans {
+		fullStart, fullEnd := span.start, span.end
+		if fullStart < last {
+			continue
+		}
 		if fullStart > last {
 			text := content[last:fullStart]
 			if text != "" {
 				parts = append(parts, map[string]any{"type": "text", "text": text})
 			}
 		}
-		url := content[urlStart:urlEnd]
-		part := map[string]any{
-			"type": "image_url",
-			"image_url": map[string]any{
-				"url": url,
-			},
-		}
-		if altStart >= 0 && altEnd >= altStart {
-			alt := content[altStart:altEnd]
-			if alt != "" {
-				part["image_url"].(map[string]any)["detail"] = "auto"
+		switch span.kind {
+		case "image":
+			part := map[string]any{
+				"type": "image_url",
+				"image_url": map[string]any{
+					"url": span.url,
+					"detail": "auto",
+				},
+			}
+			parts = append(parts, part)
+		case "file":
+			// Skip non-image file attachments: the "file" content type is only
+			// supported by select OpenAI models and causes 400 errors on others.
+			// The surrounding text already describes the attachment.
+		default:
+			text := content[fullStart:fullEnd]
+			if text != "" {
+				parts = append(parts, map[string]any{"type": "text", "text": text})
 			}
 		}
-		parts = append(parts, part)
 		last = fullEnd
 	}
 	if last < len(content) {

@@ -7,6 +7,7 @@ export type {
   AuthResponse,
   ConversationDTO,
   MessageDTO,
+  CreateMessageAttachmentRequest,
   ToolCallRecord,
   CompletionTraceResponse,
   CompleteResponse,
@@ -29,6 +30,8 @@ export type {
   HeartbeatConfig,
   MCPServerConfig,
   SSHServerConfig,
+  DAVConfig,
+  DAVTestResult,
   HeartbeatEventDTO,
   RealtimeEvent,
   MCPToolSummary,
@@ -65,6 +68,8 @@ import type {
   HeartbeatEventDTO,
   RealtimeEvent,
   MCPServerTestResult,
+  DAVConfig,
+  DAVTestResult,
   ProviderModelsProbeResult,
   UserConfig,
   ServerUserConfig,
@@ -259,6 +264,13 @@ function normalizeUserConfig(raw: ServerUserConfig): UserConfig {
 
   const heartbeat = raw?.heartbeat ?? {};
 
+  const rawDAV = raw?.integrations?.dav;
+  const davList = Array.isArray(rawDAV)
+    ? rawDAV
+    : rawDAV && typeof rawDAV === "object"
+      ? [rawDAV]
+      : [];
+
   return {
     integrations: {
       emailAccounts: (raw?.integrations?.emailAccounts ?? []).map((acct) => ({
@@ -269,6 +281,18 @@ function normalizeUserConfig(raw: ServerUserConfig): UserConfig {
         ? raw.integrations!.telegramBots
         : [],
       sshServers: Array.isArray(raw?.integrations?.sshServers) ? raw.integrations!.sshServers : [],
+      dav: davList.map((dav, index) => ({
+        id: dav.id,
+        name: dav.name?.trim() || `DAV ${index + 1}`,
+        url: dav.url ?? "",
+        username: dav.username ?? "",
+        password: dav.password ?? "",
+        enabled: dav.enabled ?? false,
+        webdavEnabled: dav.webdavEnabled ?? true,
+        caldavEnabled: dav.caldavEnabled ?? true,
+        carddavEnabled: dav.carddavEnabled ?? true,
+        pollIntervalSeconds: dav.pollIntervalSeconds ?? 900,
+      })),
       companionApps: Array.isArray(raw?.integrations?.companionApps)
         ? raw.integrations!.companionApps
         : [],
@@ -335,6 +359,18 @@ function toServerUserConfig(config: UserConfig): ServerUserConfig {
       })),
       telegramBots: config.integrations.telegramBots ?? [],
       sshServers: config.integrations.sshServers ?? [],
+      dav: (config.integrations.dav ?? []).map((dav) => ({
+        id: dav.id || undefined,
+        name: dav.name,
+        url: dav.url,
+        username: dav.username,
+        password: dav.password,
+        enabled: dav.enabled,
+        webdavEnabled: dav.webdavEnabled,
+        caldavEnabled: dav.caldavEnabled,
+        carddavEnabled: dav.carddavEnabled,
+        pollIntervalSeconds: dav.pollIntervalSeconds,
+      })),
       companionApps: config.integrations.companionApps ?? [],
       defaultNotificationBotId: config.integrations.defaultNotificationBotId ?? "",
     },
@@ -370,6 +406,10 @@ export const endpoints = {
     api<AuthResponse>("/v1/auth/login", {
       method: "POST",
       body: JSON.stringify({ username, password, device }),
+    }),
+  logout: () =>
+    api<{ loggedOut: boolean }>("/v1/auth/logout", {
+      method: "POST",
     }),
 
   // Config
@@ -477,10 +517,15 @@ export const endpoints = {
     );
     return data?.toolCalls ?? [];
   },
-  createMessage: (convId: string, role: string, content: string) =>
+  createMessage: (
+    convId: string,
+    role: string,
+    content: string,
+    attachments?: CreateMessageAttachmentRequest[],
+  ) =>
     api<MessageDTO>(`/v1/conversations/${convId}/messages`, {
       method: "POST",
-      body: JSON.stringify({ role, content }),
+      body: JSON.stringify({ role, content, attachments: attachments ?? [] }),
     }),
 
   // Orchestrator
@@ -497,6 +542,7 @@ export const endpoints = {
     onToken: (token: string) => void,
     providerOrder?: string[],
     onToolCall?: (name: string, args: string, kind?: "TOOL" | "MCP") => void,
+    onToolResult?: (name: string, result: string, isError?: boolean) => void,
     onUsage?: (usage: TokenUsage) => void,
   ): Promise<string> => {
     const token = getAccessToken();
@@ -551,6 +597,8 @@ export const endpoints = {
           } else if (eventType === "tool_call" && onToolCall) {
             const kind = data.kind === "MCP" ? "MCP" : data.kind === "TOOL" ? "TOOL" : undefined;
             onToolCall(data.name, data.arguments ?? "{}", kind);
+          } else if (eventType === "tool_result" && onToolResult) {
+            onToolResult(data.name, data.result ?? "", Boolean(data.error));
           } else if (eventType === "error") {
             throw new ApiError(502, data.error ?? "stream error");
           }
@@ -690,6 +738,22 @@ export const endpoints = {
     api<{ ok: boolean; error?: string }>("/v1/ssh/test", {
       method: "POST",
       body: JSON.stringify(params),
+    }),
+
+  // DAV test
+  testDAVConnection: (params: DAVConfig) =>
+    api<DAVTestResult>("/v1/dav/test", {
+      method: "POST",
+      body: JSON.stringify({
+        url: params.url,
+        username: params.username,
+        password: params.password,
+        enabled: params.enabled,
+        webdavEnabled: params.webdavEnabled,
+        caldavEnabled: params.caldavEnabled,
+        carddavEnabled: params.carddavEnabled,
+        pollIntervalSeconds: params.pollIntervalSeconds,
+      }),
     }),
 
   // Voice

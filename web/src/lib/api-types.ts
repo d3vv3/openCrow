@@ -29,7 +29,24 @@ export interface MessageDTO {
   conversationId: string;
   role: string;
   content: string;
+  attachments?: MessageAttachmentDTO[];
   createdAt: string;
+}
+
+export interface MessageAttachmentDTO {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  dataUrl: string;
+  createdAt: string;
+}
+
+export interface CreateMessageAttachmentRequest {
+  fileName: string;
+  mimeType: string;
+  sizeBytes?: number;
+  dataUrl: string;
 }
 
 export interface ToolCallRecord {
@@ -279,6 +296,54 @@ export interface SSHServerConfig {
   enabled: boolean;
 }
 
+export interface DAVConfig {
+  id?: string;
+  name: string;
+  url: string;
+  username: string;
+  password: string;
+  enabled: boolean;
+  webdavEnabled: boolean;
+  caldavEnabled: boolean;
+  carddavEnabled: boolean;
+  pollIntervalSeconds: number;
+}
+
+export interface DAVCollection {
+  path: string;
+  displayName?: string;
+  description?: string;
+  ctag?: string;
+}
+
+export interface DAVFileListItem {
+  path: string;
+  displayName?: string;
+  contentType?: string;
+  isCollection: boolean;
+  size?: number;
+  updatedAt?: string;
+}
+
+export interface DAVDiscoveryInfo {
+  enabled: boolean;
+  homeSet?: string;
+  collections?: DAVCollection[];
+  entries?: DAVFileListItem[];
+  error?: string;
+}
+
+export interface DAVTestResult {
+  ok: boolean;
+  latencyMs: number;
+  error?: string;
+  principal?: string;
+  webdav?: DAVDiscoveryInfo;
+  caldav?: DAVDiscoveryInfo;
+  carddav?: DAVDiscoveryInfo;
+  capabilities?: string[];
+}
+
 export interface HeartbeatEventDTO {
   id: string;
   status: string;
@@ -315,6 +380,7 @@ export interface UserConfig {
     emailAccounts: EmailAccountConfig[];
     telegramBots: TelegramBotConfig[];
     sshServers: SSHServerConfig[];
+    dav: DAVConfig[];
     companionApps: CompanionAppConfig[];
     defaultNotificationBotId: string;
   };
@@ -340,6 +406,7 @@ export interface ServerUserConfig {
     emailAccounts?: Array<EmailAccountConfig & { useTls?: boolean }>;
     telegramBots?: TelegramBotConfig[];
     sshServers?: SSHServerConfig[];
+    dav?: Partial<DAVConfig> | Array<Partial<DAVConfig>>;
     companionApps?: CompanionAppConfig[];
     defaultNotificationBotId?: string;
   };

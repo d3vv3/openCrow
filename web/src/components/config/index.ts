@@ -7,6 +7,7 @@ export { McpServerCard } from "./McpServerCard";
 export { EmailTab } from "./EmailTab";
 export { SchedulesTab } from "./SchedulesTab";
 export { ServersTab } from "./ServersTab";
+export { DAVTab } from "./DAVTab";
 export { TelegramTab } from "./TelegramTab";
 export { DevicesTab } from "./DevicesTab";
 export * from "./types";

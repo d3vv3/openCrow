@@ -201,6 +201,7 @@ func (s *Server) routes() {
 	s.registerToolRoutes()
 	s.registerSkillRoutes()
 	s.registerMCPRoutes()
+	s.registerDAVRoutes()
 	s.registerTelegramRoutes()
 
 	// File-based skills (SKILL.md on disk)
@@ -240,6 +241,7 @@ func (s *Server) routes() {
 func (s *Server) registerAuthRoutes() {
 	s.mux.HandleFunc("POST /v1/auth/login", s.handleLogin)
 	s.mux.HandleFunc("POST /v1/auth/refresh", s.handleRefresh)
+	s.mux.Handle("POST /v1/auth/logout", s.requireAccessToken(http.HandlerFunc(s.handleLogout)))
 	s.mux.Handle("POST /v1/auth/device-tokens", s.requireAccessToken(http.HandlerFunc(s.handleCreateDeviceTokens)))
 }
 
@@ -314,6 +316,10 @@ func (s *Server) registerSkillRoutes() {
 
 func (s *Server) registerMCPRoutes() {
 	s.mux.Handle("POST /v1/mcp/test", s.requireAccessToken(http.HandlerFunc(s.handleTestMCPServer)))
+}
+
+func (s *Server) registerDAVRoutes() {
+	s.mux.Handle("POST /v1/dav/test", s.requireAccessToken(http.HandlerFunc(s.handleTestDAVConnection)))
 }
 
 func (s *Server) registerTelegramRoutes() {
