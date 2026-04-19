@@ -263,7 +263,7 @@ export default function ChatShell({
                     }}
                     onKeyDown={handleKeyDown}
                     className="flex-1 min-w-0 bg-transparent text-on-surface placeholder:text-on-surface-variant px-3 py-2 rounded text-sm font-body focus:outline-none focus-visible:outline-none resize-none overflow-y-auto leading-5"
-                    style={{ height: "36px", maxHeight: "72px" }}
+                    style={{ height: "36px", maxHeight: "72px", outline: "none" }}
                   />
 
                   <Button onClick={handleSend} loading={sending} disabled={!composing.trim()}>
