@@ -1,5 +1,6 @@
 "use client";
 
+import "@xterm/xterm/css/xterm.css";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getAccessToken, getApiBase } from "@/lib/api";
 
