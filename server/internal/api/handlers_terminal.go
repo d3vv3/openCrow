@@ -193,6 +193,10 @@ type ptyResizeMsg struct {
 	Rows uint16 `json:"rows"`
 }
 
+// @Summary Open a WebSocket terminal session (PTY)
+// @Tags    server
+// @Security BearerAuth
+// @Router  /v1/terminal/ws [get]
 // handleTerminalWS upgrades to WebSocket and bridges stdin/stdout with a PTY.
 func (s *Server) handleTerminalWS(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())

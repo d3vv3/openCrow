@@ -44,6 +44,16 @@ func buildSSHClientConfig(username, authMode, sshKey, password, passphrase strin
 	return cfg, nil
 }
 
+// @Summary Test an SSH connection
+// @Tags    ssh
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body TestSSHConnectionRequest true "SSH connection parameters"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/ssh/test [post]
 func (s *Server) handleTestSSHConnection(w http.ResponseWriter, r *http.Request) {
 	var req TestSSHConnectionRequest
 	if err := decodeJSON(r, &req); err != nil {

@@ -11,6 +11,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// @Summary Log in with username and password
+// @Tags    auth
+// @Accept  json
+// @Produce json
+// @Param   body body LoginRequest true "Login credentials"
+// @Success 200 {object} AuthResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/auth/login [post]
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -52,6 +61,15 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, AuthResponse{User: user, Tokens: tokens})
 }
 
+// @Summary Refresh access token using a refresh token
+// @Tags    auth
+// @Accept  json
+// @Produce json
+// @Param   body body RefreshRequest true "Refresh token"
+// @Success 200 {object} AuthResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/auth/refresh [post]
 func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -117,6 +135,13 @@ func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, AuthResponse{User: user, Tokens: tokens})
 }
 
+// @Summary List active sessions for the current user
+// @Tags    auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]SessionDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/sessions [get]
 func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	sessions, err := s.listUserSessions(r.Context(), userID)
@@ -127,6 +152,16 @@ func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"sessions": sessions})
 }
 
+// @Summary Delete a session by ID
+// @Tags    auth
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Session ID"
+// @Success 200 {object} map[string]bool
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/sessions/{id} [delete]
 func (s *Server) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	sessionID := r.PathValue("id")
@@ -148,6 +183,13 @@ func (s *Server) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": true})
 }
 
+// @Summary List devices (sessions) for the current user
+// @Tags    auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]SessionDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices [get]
 func (s *Server) handleListDevices(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	sessions, err := s.listUserSessions(r.Context(), userID)
@@ -208,6 +250,16 @@ func clientTimezoneFromContext(ctx context.Context) string {
 	return strings.TrimSpace(tz)
 }
 
+// @Summary Create tokens for a new device session
+// @Tags    auth
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body CreateDeviceTokensRequest true "Device label"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/auth/device-tokens [post]
 func (s *Server) handleCreateDeviceTokens(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := userIDFromContext(ctx)

@@ -255,6 +255,13 @@ func fetchSkillFile(url string) (string, error) {
 
 // ── HTTP Handlers ─────────────────────────────────────────────────────────────
 
+// @Summary List all skill files
+// @Tags    skill-files
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {array} SkillFile
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/skill-files [get]
 func (s *Server) handleListSkillFiles(w http.ResponseWriter, r *http.Request) {
 	skills, err := s.skillStore.List()
 	if err != nil {
@@ -264,6 +271,15 @@ func (s *Server) handleListSkillFiles(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, skills)
 }
 
+// @Summary Get a skill file by slug
+// @Tags    skill-files
+// @Security BearerAuth
+// @Produce json
+// @Param   slug path string true "Skill slug"
+// @Success 200 {object} SkillFile
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/skill-files/{slug} [get]
 func (s *Server) handleGetSkillFile(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	sf, err := s.skillStore.Get(slug)
@@ -284,6 +300,16 @@ type createSkillFileRequest struct {
 	Content     string `json:"content"`
 }
 
+// @Summary Create a new skill file
+// @Tags    skill-files
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body createSkillFileRequest true "Skill name, description and optional content"
+// @Success 201 {object} SkillFile
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/skill-files [post]
 func (s *Server) handleCreateSkillFile(w http.ResponseWriter, r *http.Request) {
 	var req createSkillFileRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -315,6 +341,17 @@ type updateSkillFileRequest struct {
 	Content string `json:"content"`
 }
 
+// @Summary Update a skill file's content
+// @Tags    skill-files
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   slug path string               true "Skill slug"
+// @Param   body body updateSkillFileRequest true "New content"
+// @Success 200 {object} SkillFile
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/skill-files/{slug} [put]
 func (s *Server) handleUpdateSkillFile(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	var req updateSkillFileRequest
@@ -330,6 +367,14 @@ func (s *Server) handleUpdateSkillFile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, sf)
 }
 
+// @Summary Delete a skill file by slug
+// @Tags    skill-files
+// @Security BearerAuth
+// @Produce json
+// @Param   slug path string true "Skill slug"
+// @Success 200 {object} map[string]bool
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/skill-files/{slug} [delete]
 func (s *Server) handleDeleteSkillFile(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if err := s.skillStore.Delete(slug); err != nil {
@@ -349,6 +394,16 @@ type installSkillsResult struct {
 	Count     int      `json:"count"`
 }
 
+// @Summary Install skill files from a GitHub repository
+// @Tags    skill-files
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body installSkillsRequest true "GitHub source (owner/repo or URL)"
+// @Success 200 {object} installSkillsResult
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/skill-files/install [post]
 func (s *Server) handleInstallSkills(w http.ResponseWriter, r *http.Request) {
 	var req installSkillsRequest
 	if err := decodeJSON(r, &req); err != nil {

@@ -1,4 +1,3070 @@
+basePath: /
+definitions:
+  api.AuthResponse:
+    properties:
+      tokens: {}
+      user:
+        $ref: '#/definitions/api.UserDTO'
+    type: object
+  api.CompleteDeviceTaskRequest:
+    properties:
+      output:
+        type: string
+      success:
+        type: boolean
+    type: object
+  api.CompleteRequest:
+    properties:
+      conversationId:
+        type: string
+      maxRetries:
+        type: integer
+      message:
+        type: string
+      providerOrder:
+        items:
+          type: string
+        type: array
+    type: object
+  api.CompleteResponse:
+    properties:
+      attempts:
+        type: integer
+      output:
+        type: string
+      provider:
+        type: string
+      trace:
+        $ref: '#/definitions/api.CompletionTraceResponse'
+      usage:
+        $ref: '#/definitions/api.TokenUsageDTO'
+    type: object
+  api.CompletionTraceResponse:
+    properties:
+      providerAttempts:
+        items:
+          $ref: '#/definitions/api.ProviderAttemptDTO'
+        type: array
+      runtimeActions:
+        items:
+          $ref: '#/definitions/api.RuntimeActionDTO'
+        type: array
+      toolCalls:
+        items:
+          $ref: '#/definitions/api.ToolCallDTO'
+        type: array
+    type: object
+  api.ConversationDTO:
+    properties:
+      automationKind:
+        type: string
+      channel:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      isAutomatic:
+        type: boolean
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  api.CreateConversationRequest:
+    properties:
+      title:
+        type: string
+    type: object
+  api.CreateDeviceTaskRequest:
+    properties:
+      instruction:
+        type: string
+      targetDevice:
+        type: string
+    type: object
+  api.CreateDeviceTokensRequest:
+    properties:
+      deviceLabel:
+        type: string
+    type: object
+  api.CreateEmailInboxRequest:
+    properties:
+      address:
+        type: string
+      imapHost:
+        type: string
+      imapPassword:
+        type: string
+      imapPort:
+        type: integer
+      imapUsername:
+        type: string
+      pollIntervalSeconds:
+        type: integer
+      useTls:
+        type: boolean
+    type: object
+  api.CreateMemoryRequest:
+    properties:
+      category:
+        type: string
+      confidence:
+        type: integer
+      content:
+        type: string
+    type: object
+  api.CreateMessageRequest:
+    properties:
+      content:
+        type: string
+      role:
+        type: string
+    type: object
+  api.CreateTaskRequest:
+    properties:
+      cronExpression:
+        type: string
+      description:
+        type: string
+      executeAt:
+        type: string
+      prompt:
+        type: string
+    type: object
+  api.DeviceCapability:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  api.DeviceRegistrationDTO:
+    properties:
+      capabilities:
+        items:
+          $ref: '#/definitions/api.DeviceCapability'
+        type: array
+      deviceId:
+        type: string
+      lastSeenAt:
+        type: string
+    type: object
+  api.DeviceTaskDTO:
+    properties:
+      createdAt:
+        type: string
+      expiresAt:
+        type: string
+      id:
+        type: string
+      instruction:
+        type: string
+      resultOutput:
+        type: string
+      status:
+        type: string
+      targetDevice:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  api.EmailAutoconfigRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  api.EmailAutoconfigResult:
+    properties:
+      imapHost:
+        type: string
+      imapPort:
+        type: integer
+      imapUsername:
+        type: string
+      smtpHost:
+        type: string
+      smtpPort:
+        type: integer
+      source:
+        type: string
+      useTls:
+        type: boolean
+    type: object
+  api.EmailInboxDTO:
+    properties:
+      active:
+        type: boolean
+      address:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      imapHost:
+        type: string
+      imapPort:
+        type: integer
+      imapUsername:
+        type: string
+      lastPolledAt:
+        type: string
+      pollIntervalSeconds:
+        type: integer
+      updatedAt:
+        type: string
+      useTls:
+        type: boolean
+    type: object
+  api.EmailPollEventDTO:
+    properties:
+      createdAt:
+        type: string
+      detail:
+        type: string
+      id:
+        type: string
+      inboxId:
+        type: string
+      status:
+        type: string
+    type: object
+  api.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  api.HealthResponse:
+    properties:
+      env:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+    type: object
+  api.HeartbeatConfigDTO:
+    properties:
+      enabled:
+        type: boolean
+      intervalSeconds:
+        type: integer
+      nextRunAt:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: string
+    type: object
+  api.HeartbeatEventDTO:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  api.LoginRequest:
+    properties:
+      device:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  api.MCPServerTestRequest:
+    properties:
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      url:
+        type: string
+    type: object
+  api.MCPServerTestResult:
+    properties:
+      error:
+        type: string
+      latencyMs:
+        type: integer
+      ok:
+        type: boolean
+      tools:
+        items:
+          $ref: '#/definitions/api.MCPToolSummary'
+        type: array
+    type: object
+  api.MCPToolSummary:
+    properties:
+      description:
+        type: string
+      inputSchema:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+    type: object
+  api.MemoryDTO:
+    properties:
+      category:
+        type: string
+      confidence:
+        type: integer
+      content:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  api.MessageDTO:
+    properties:
+      content:
+        type: string
+      conversationId:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      role:
+        type: string
+    type: object
+  api.ProviderAttemptDTO:
+    properties:
+      attempt:
+        type: integer
+      error:
+        type: string
+      provider:
+        type: string
+      success:
+        type: boolean
+    type: object
+  api.ProviderModelsRequest:
+    properties:
+      apiKeyRef:
+        type: string
+      baseUrl:
+        type: string
+      kind:
+        type: string
+    type: object
+  api.ProviderModelsResponse:
+    properties:
+      error:
+        type: string
+      models:
+        items:
+          type: string
+        type: array
+      ok:
+        type: boolean
+    type: object
+  api.ProviderStatusEntry:
+    properties:
+      enabled:
+        type: boolean
+      error:
+        type: string
+      kind:
+        type: string
+      latencyMs:
+        type: integer
+      model:
+        type: string
+      name:
+        type: string
+      ok:
+        type: boolean
+    type: object
+  api.ProviderTestRequest:
+    properties:
+      apiKeyRef:
+        type: string
+      baseUrl:
+        type: string
+      kind:
+        type: string
+      model:
+        type: string
+      name:
+        type: string
+    type: object
+  api.ProviderTestResult:
+    properties:
+      error:
+        type: string
+      latencyMs:
+        type: integer
+      model:
+        type: string
+      ok:
+        type: boolean
+    type: object
+  api.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  api.RegisterDeviceRequest:
+    properties:
+      capabilities:
+        items:
+          $ref: '#/definitions/api.DeviceCapability'
+        type: array
+    type: object
+  api.RunServerCommandRequest:
+    properties:
+      command:
+        type: string
+      timeoutSeconds:
+        type: integer
+    type: object
+  api.RunServerCommandResponse:
+    properties:
+      command:
+        type: string
+      durationMs:
+        type: integer
+      exitCode:
+        type: integer
+      finishedAt:
+        type: string
+      shell:
+        type: string
+      startedAt:
+        type: string
+      stderr:
+        type: string
+      stdout:
+        type: string
+      timedOut:
+        type: boolean
+    type: object
+  api.RuntimeActionDTO:
+    properties:
+      command:
+        type: string
+      kind:
+        type: string
+      output:
+        type: string
+      startedAt:
+        type: string
+      status:
+        type: string
+    type: object
+  api.SessionDTO:
+    properties:
+      createdAt:
+        type: string
+      deviceLabel:
+        type: string
+      id:
+        type: string
+      lastSeenAt:
+        type: string
+    type: object
+  api.SkillFile:
+    properties:
+      content:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      slug:
+        type: string
+    type: object
+  api.TaskDTO:
+    properties:
+      consecutiveFailures:
+        type: integer
+      createdAt:
+        type: string
+      cronExpression:
+        type: string
+      description:
+        type: string
+      executeAt:
+        type: string
+      id:
+        type: string
+      lastResult:
+        type: string
+      prompt:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  api.TestEmailConnectionRequest:
+    properties:
+      imapHost:
+        type: string
+      imapPort:
+        type: integer
+      password:
+        type: string
+      useTls:
+        type: boolean
+      username:
+        type: string
+    type: object
+  api.TestSSHConnectionRequest:
+    properties:
+      authMode:
+        description: '"key" or "password"'
+        type: string
+      host:
+        type: string
+      passphrase:
+        type: string
+      password:
+        type: string
+      port:
+        type: integer
+      sshKey:
+        type: string
+      username:
+        type: string
+    type: object
+  api.TestTelegramBotRequest:
+    properties:
+      botToken:
+        type: string
+      notificationChatId:
+        type: string
+    type: object
+  api.TokenUsageDTO:
+    properties:
+      completionTokens:
+        type: integer
+      promptTokens:
+        type: integer
+      totalTokens:
+        type: integer
+    type: object
+  api.ToolCallDTO:
+    properties:
+      arguments:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      output:
+        type: string
+      status:
+        type: string
+    type: object
+  api.ToolCallRecord:
+    properties:
+      arguments:
+        additionalProperties: {}
+        type: object
+      createdAt:
+        type: string
+      durationMs:
+        type: integer
+      error:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      output:
+        type: string
+      toolName:
+        type: string
+    type: object
+  api.TriggerEmailPollRequest:
+    properties:
+      detail:
+        type: string
+      inboxId:
+        type: string
+    type: object
+  api.TriggerHeartbeatRequest:
+    properties:
+      message:
+        type: string
+    type: object
+  api.UpdateConversationRequest:
+    properties:
+      title:
+        type: string
+    type: object
+  api.UpdateEmailInboxRequest:
+    properties:
+      active:
+        type: boolean
+      imapHost:
+        type: string
+      imapPassword:
+        type: string
+      imapPort:
+        type: integer
+      imapUsername:
+        type: string
+      pollIntervalSeconds:
+        type: integer
+      useTls:
+        type: boolean
+    type: object
+  api.UpdateHeartbeatConfigRequest:
+    properties:
+      enabled:
+        type: boolean
+      intervalSeconds:
+        type: integer
+    type: object
+  api.UpdateSettingsRequest:
+    properties:
+      settings:
+        additionalProperties: {}
+        type: object
+    type: object
+  api.UpdateTaskRequest:
+    properties:
+      cronExpression:
+        type: string
+      description:
+        type: string
+      executeAt:
+        type: string
+      prompt:
+        type: string
+      status:
+        type: string
+    type: object
+  api.UserDTO:
+    properties:
+      id:
+        type: string
+      username:
+        type: string
+    type: object
+  api.UserSettingsDTO:
+    properties:
+      settings:
+        additionalProperties: {}
+        type: object
+      updatedAt:
+        type: string
+      userId:
+        type: string
+    type: object
+  api.WorkerLogEntry:
+    properties:
+      line:
+        type: string
+      ts:
+        type: string
+    type: object
+  api.WorkerStat:
+    properties:
+      lastError:
+        type: string
+      lastSuccess:
+        type: string
+      lastTick:
+        type: string
+      name:
+        type: string
+      ticks:
+        type: integer
+    type: object
+  api.createSkillFileRequest:
+    properties:
+      content:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  api.installSkillsRequest:
+    properties:
+      source:
+        type: string
+    type: object
+  api.installSkillsResult:
+    properties:
+      count:
+        type: integer
+      errors:
+        items:
+          type: string
+        type: array
+      installed:
+        items:
+          type: string
+        type: array
+    type: object
+  api.updateSkillFileRequest:
+    properties:
+      content:
+        type: string
+    type: object
+  configstore.CompanionAppConfig:
+    properties:
+      enabled:
+        type: boolean
+      id:
+        type: string
+      label:
+        type: string
+      name:
+        type: string
+    type: object
+  configstore.EmailAccountConfig:
+    properties:
+      address:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      imapHost:
+        type: string
+      imapPassword:
+        type: string
+      imapPort:
+        type: integer
+      imapUsername:
+        type: string
+      label:
+        type: string
+      pollIntervalSeconds:
+        type: integer
+      smtpHost:
+        type: string
+      smtpPort:
+        type: integer
+      useTls:
+        type: boolean
+    type: object
+  configstore.GolangToolEntry:
+    properties:
+      description:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+      sourceCode:
+        type: string
+    type: object
+  configstore.HeartbeatConfig:
+    properties:
+      activeHours:
+        $ref: '#/definitions/configstore.HeartbeatSchedule'
+      enabled:
+        type: boolean
+      intervalSeconds:
+        type: integer
+      model:
+        type: string
+    type: object
+  configstore.HeartbeatSchedule:
+    properties:
+      end:
+        type: string
+      start:
+        type: string
+      tz:
+        type: string
+    type: object
+  configstore.IntegrationsConfig:
+    properties:
+      companionApps:
+        items:
+          $ref: '#/definitions/configstore.CompanionAppConfig'
+        type: array
+      defaultNotificationBotId:
+        type: string
+      emailAccounts:
+        items:
+          $ref: '#/definitions/configstore.EmailAccountConfig'
+        type: array
+      sshServers:
+        items:
+          $ref: '#/definitions/configstore.SSHServerConfig'
+        type: array
+      telegramBots:
+        items:
+          $ref: '#/definitions/configstore.TelegramBotConfig'
+        type: array
+    type: object
+  configstore.LLMConfig:
+    properties:
+      providers:
+        items:
+          $ref: '#/definitions/configstore.ProviderConfig'
+        type: array
+    type: object
+  configstore.LinuxSandboxConfig:
+    properties:
+      enabled:
+        type: boolean
+    type: object
+  configstore.MCPConfig:
+    properties:
+      servers:
+        items:
+          $ref: '#/definitions/configstore.MCPServerConfig'
+        type: array
+    type: object
+  configstore.MCPServerConfig:
+    properties:
+      enabled:
+        type: boolean
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        type: string
+      name:
+        type: string
+      url:
+        type: string
+    type: object
+  configstore.MemoryConfig:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/configstore.MemoryEntry'
+        type: array
+    type: object
+  configstore.MemoryEntry:
+    properties:
+      category:
+        type: string
+      content:
+        type: string
+      id:
+        type: string
+      strength:
+        type: integer
+    type: object
+  configstore.PromptsConfig:
+    properties:
+      heartbeatPrompt:
+        type: string
+      systemPrompt:
+        type: string
+    type: object
+  configstore.ProviderConfig:
+    properties:
+      apiKeyRef:
+        type: string
+      baseUrl:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      kind:
+        type: string
+      model:
+        type: string
+      name:
+        type: string
+      priority:
+        description: Lower = higher priority (0 = first). Used for fallback order.
+        type: integer
+    type: object
+  configstore.SSHServerConfig:
+    properties:
+      authMode:
+        description: '"key" or "password"'
+        type: string
+      enabled:
+        type: boolean
+      host:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      passphrase:
+        type: string
+      password:
+        type: string
+      port:
+        type: integer
+      sshKey:
+        type: string
+      username:
+        type: string
+    type: object
+  configstore.ScheduleConfig:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/configstore.ScheduleEntry'
+        type: array
+    type: object
+  configstore.ScheduleEntry:
+    properties:
+      cronExpression:
+        type: string
+      description:
+        type: string
+      executeAt:
+        type: string
+      id:
+        type: string
+      prompt:
+        type: string
+      status:
+        type: string
+    type: object
+  configstore.SkillEntry:
+    properties:
+      content:
+        type: string
+      description:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  configstore.SkillsConfig:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/configstore.SkillEntry'
+        type: array
+    type: object
+  configstore.TelegramBotConfig:
+    properties:
+      allowedChatIds:
+        items:
+          type: string
+        type: array
+      botToken:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      label:
+        type: string
+      lastUpdateId:
+        type: integer
+      notificationChatId:
+        type: string
+      pollIntervalSeconds:
+        type: integer
+    type: object
+  configstore.ToolDefinition:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parameters:
+        items:
+          $ref: '#/definitions/configstore.ToolParameter'
+        type: array
+      source:
+        type: string
+    type: object
+  configstore.ToolParameter:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      required:
+        type: boolean
+      type:
+        type: string
+    type: object
+  configstore.ToolsConfig:
+    properties:
+      definitions:
+        items:
+          $ref: '#/definitions/configstore.ToolDefinition'
+        type: array
+      enabled:
+        additionalProperties:
+          type: boolean
+        type: object
+      golangTools:
+        items:
+          $ref: '#/definitions/configstore.GolangToolEntry'
+        type: array
+      toggles:
+        additionalProperties:
+          type: boolean
+        type: object
+    type: object
+  configstore.UserConfig:
+    properties:
+      heartbeat:
+        $ref: '#/definitions/configstore.HeartbeatConfig'
+      integrations:
+        $ref: '#/definitions/configstore.IntegrationsConfig'
+      linuxSandbox:
+        $ref: '#/definitions/configstore.LinuxSandboxConfig'
+      llm:
+        $ref: '#/definitions/configstore.LLMConfig'
+      mcp:
+        $ref: '#/definitions/configstore.MCPConfig'
+      memory:
+        $ref: '#/definitions/configstore.MemoryConfig'
+      prompts:
+        $ref: '#/definitions/configstore.PromptsConfig'
+      schedules:
+        $ref: '#/definitions/configstore.ScheduleConfig'
+      skills:
+        $ref: '#/definitions/configstore.SkillsConfig'
+      tools:
+        $ref: '#/definitions/configstore.ToolsConfig'
+      updatedAt:
+        type: string
+    type: object
+host: localhost:8080
 info:
   contact: {}
-paths: {}
+  description: Self-hostable multi-device AI assistant API
+  title: openCrow API
+  version: "1.0"
+paths:
+  /healthz:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /v1/auth/device-tokens:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device label
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateDeviceTokensRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create tokens for a new device session
+      tags:
+      - auth
+  /v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Log in with username and password
+      tags:
+      - auth
+  /v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Refresh access token using a refresh token
+      tags:
+      - auth
+  /v1/config:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/configstore.UserConfig'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get full user config (providers, tools, integrations, etc.)
+      tags:
+      - config
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Full user config
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/configstore.UserConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/configstore.UserConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace full user config
+      tags:
+      - config
+  /v1/conversations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.ConversationDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all conversations for the current user
+      tags:
+      - conversations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Conversation title
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateConversationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.ConversationDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new conversation
+      tags:
+      - conversations
+  /v1/conversations/{id}:
+    delete:
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a conversation by ID
+      tags:
+      - conversations
+    get:
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ConversationDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a conversation by ID
+      tags:
+      - conversations
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated title
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateConversationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ConversationDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a conversation's title
+      tags:
+      - conversations
+  /v1/conversations/{id}/messages:
+    get:
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.MessageDTO'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List messages in a conversation
+      tags:
+      - conversations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message role and content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.MessageDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add a message to a conversation
+      tags:
+      - conversations
+  /v1/conversations/{id}/messages/{msgId}/regenerate:
+    post:
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message ID
+        in: path
+        name: msgId
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream of delta/tool_call/tool_result/done/error events
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Regenerate an assistant message via SSE stream
+      tags:
+      - conversations
+  /v1/conversations/{id}/tool-calls:
+    get:
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.ToolCallRecord'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List tool calls for a conversation
+      tags:
+      - conversations
+  /v1/devices:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.SessionDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List devices (sessions) for the current user
+      tags:
+      - auth
+  /v1/devices/{id}/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device ID (session ID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Device capabilities
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.RegisterDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Register a device with its capabilities
+      tags:
+      - devices
+  /v1/devices/registrations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.DeviceRegistrationDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List device registrations for the current user
+      tags:
+      - devices
+  /v1/devices/tasks:
+    get:
+      parameters:
+      - description: Filter by target device ID
+        in: query
+        name: target
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.DeviceTaskDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List device tasks (optionally filtered by target device)
+      tags:
+      - devices
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Target device and instruction
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateDeviceTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.DeviceTaskDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a task for a target device
+      tags:
+      - devices
+  /v1/devices/tasks/{id}:
+    delete:
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a device task by ID
+      tags:
+      - devices
+  /v1/devices/tasks/{id}/complete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Success flag and output
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CompleteDeviceTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark a device task as complete
+      tags:
+      - devices
+  /v1/email/autoconfig:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email address to look up
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.EmailAutoconfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.EmailAutoconfigResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Auto-detect IMAP/SMTP settings for an email address
+      tags:
+      - email
+  /v1/email/inboxes:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.EmailInboxDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List email inboxes for the current user
+      tags:
+      - email
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Inbox configuration
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateEmailInboxRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.EmailInboxDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new email inbox
+      tags:
+      - email
+  /v1/email/inboxes/{id}:
+    delete:
+      parameters:
+      - description: Inbox ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete an email inbox by ID
+      tags:
+      - email
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Inbox ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateEmailInboxRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.EmailInboxDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an email inbox by ID
+      tags:
+      - email
+  /v1/email/poll:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Inbox ID and optional detail
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.TriggerEmailPollRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/api.EmailPollEventDTO'
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Trigger an email poll for an inbox
+      tags:
+      - email
+  /v1/email/poll-events:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.EmailPollEventDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List email poll events for the current user
+      tags:
+      - email
+  /v1/email/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: IMAP connection details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.TestEmailConnectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test an IMAP email connection
+      tags:
+      - email
+  /v1/heartbeat:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HeartbeatConfigDTO'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get heartbeat configuration
+      tags:
+      - heartbeat
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Heartbeat settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateHeartbeatConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HeartbeatConfigDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update heartbeat configuration
+      tags:
+      - heartbeat
+  /v1/heartbeat/events:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.HeartbeatEventDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List heartbeat events for the current user
+      tags:
+      - heartbeat
+  /v1/heartbeat/trigger:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Optional message
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.TriggerHeartbeatRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Manually trigger a heartbeat event
+      tags:
+      - heartbeat
+  /v1/mcp/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: MCP server URL and headers
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.MCPServerTestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MCPServerTestResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test an MCP server connection and list its tools
+      tags:
+      - config
+  /v1/memory:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.MemoryDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all memory entries for the current user
+      tags:
+      - memory
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Memory entry
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateMemoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.MemoryDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new memory entry
+      tags:
+      - memory
+  /v1/memory/{id}:
+    delete:
+      parameters:
+      - description: Memory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a memory entry by ID
+      tags:
+      - memory
+  /v1/orchestrator/complete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Message and conversation ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CompleteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CompleteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Run a full orchestrator completion (blocking)
+      tags:
+      - orchestrator
+  /v1/orchestrator/stream:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Message and conversation ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CompleteRequest'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream of delta/tool_call/tool_result/done/error events
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Stream an orchestrator completion via SSE
+      tags:
+      - orchestrator
+  /v1/providers/models:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Provider kind and credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.ProviderModelsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ProviderModelsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Probe available models from a provider
+      tags:
+      - config
+  /v1/providers/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.ProviderStatusEntry'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get connectivity status for all configured providers
+      tags:
+      - config
+  /v1/providers/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Provider connection details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.ProviderTestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ProviderTestResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test an LLM provider configuration
+      tags:
+      - config
+  /v1/realtime/last:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the last realtime event for the current user
+      tags:
+      - orchestrator
+  /v1/server/command:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Shell command and optional timeout
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.RunServerCommandRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.RunServerCommandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Run a shell command on the server
+      tags:
+      - server
+  /v1/sessions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.SessionDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List active sessions for the current user
+      tags:
+      - auth
+  /v1/sessions/{id}:
+    delete:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a session by ID
+      tags:
+      - auth
+  /v1/settings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.UserSettingsDTO'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user settings
+      tags:
+      - config
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Settings map
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.UserSettingsDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user settings
+      tags:
+      - config
+  /v1/skill-files:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.SkillFile'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all skill files
+      tags:
+      - skill-files
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Skill name, description and optional content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.createSkillFileRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.SkillFile'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new skill file
+      tags:
+      - skill-files
+  /v1/skill-files/{slug}:
+    delete:
+      parameters:
+      - description: Skill slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a skill file by slug
+      tags:
+      - skill-files
+    get:
+      parameters:
+      - description: Skill slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.SkillFile'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a skill file by slug
+      tags:
+      - skill-files
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Skill slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: New content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateSkillFileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.SkillFile'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a skill file's content
+      tags:
+      - skill-files
+  /v1/skill-files/install:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: GitHub source (owner/repo or URL)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.installSkillsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.installSkillsResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Install skill files from a GitHub repository
+      tags:
+      - skill-files
+  /v1/skills:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/configstore.SkillsConfig'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get skills configuration for the current user
+      tags:
+      - config
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Skills config
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/configstore.SkillsConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/configstore.SkillsConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update skills configuration for the current user
+      tags:
+      - config
+  /v1/ssh/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: SSH connection parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.TestSSHConnectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test an SSH connection
+      tags:
+      - ssh
+  /v1/status/workers:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.WorkerStat'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get background worker health status
+      tags:
+      - server
+  /v1/tasks:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.TaskDTO'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all scheduled tasks
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.TaskDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new scheduled task
+      tags:
+      - tasks
+  /v1/tasks/{id}:
+    delete:
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a task by ID
+      tags:
+      - tasks
+    get:
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TaskDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a task by ID
+      tags:
+      - tasks
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TaskDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a task by ID
+      tags:
+      - tasks
+  /v1/telegram/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bot token and optional notification chat ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.TestTelegramBotRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test a Telegram bot token
+      tags:
+      - config
+  /v1/terminal/ws:
+    get:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Open a WebSocket terminal session (PTY)
+      tags:
+      - server
+  /v1/tools:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/configstore.ToolsConfig'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get tool configuration for the current user
+      tags:
+      - config
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tools config
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/configstore.ToolsConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/configstore.ToolsConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update tool configuration for the current user
+      tags:
+      - config
+  /v1/voice/transcribe:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Audio file to transcribe
+        in: formData
+        name: audio
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Transcribe an audio file via the whisper sidecar
+      tags:
+      - server
+  /v1/whisper/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get whisper sidecar status
+      tags:
+      - server
+  /v1/workers/logs:
+    get:
+      parameters:
+      - description: Worker name (task-worker, heartbeat-worker, email-worker)
+        in: query
+        name: worker
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/api.WorkerLogEntry'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get recent log lines for a background worker
+      tags:
+      - server
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

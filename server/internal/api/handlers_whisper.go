@@ -6,6 +6,13 @@ import (
 	"net/http"
 )
 
+// @Summary Get whisper sidecar status
+// @Tags    server
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/whisper/status [get]
 // handleWhisperStatus returns the current status of the whisper sidecar.
 // GET /v1/whisper/status
 // Response: { "status": "ok" | "downloading" | "down", "model": "ggml-base" }
@@ -29,6 +36,16 @@ func (s *Server) handleWhisperStatus(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
+// @Summary Transcribe an audio file via the whisper sidecar
+// @Tags    server
+// @Security BearerAuth
+// @Accept  multipart/form-data
+// @Produce json
+// @Param   audio formData file true "Audio file to transcribe"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "Bad request"
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/voice/transcribe [post]
 // handleVoiceTranscribe accepts a multipart audio upload, forwards it to the
 // whisper sidecar, and returns the transcript as JSON.
 // POST /v1/voice/transcribe

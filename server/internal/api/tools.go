@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // buildToolExecutor returns a function that executes a named tool with args.
@@ -21,6 +22,10 @@ func (s *Server) buildToolExecutor(parentCtx context.Context, userID string) fun
 			}
 		}
 		result, err := s.executeTool(execCtx, userID, name, args)
+		execErr := err
+		if execErr == nil {
+			execErr = toolResultError(result)
+		}
 		if name != "execute_shell_command" {
 			kind := "TOOL"
 			if !isBuiltinToolName(name) {
@@ -31,14 +36,29 @@ func (s *Server) buildToolExecutor(parentCtx context.Context, userID string) fun
 					kind = "MCP"
 				}
 			}
-			s.writeToolCallToTerminal(userID, kind, name, args, result, err)
+			s.writeToolCallToTerminal(userID, kind, name, args, result, execErr)
 		}
-		if err != nil {
-			return "", err
+		if execErr != nil {
+			return "", execErr
 		}
 		out, _ := json.Marshal(result)
 		return string(out), nil
 	}
+}
+
+func toolResultError(result any) error {
+	m, ok := result.(map[string]any)
+	if !ok {
+		return nil
+	}
+	success, ok := m["success"].(bool)
+	if !ok || success {
+		return nil
+	}
+	if errText := strings.TrimSpace(fmt.Sprint(m["error"])); errText != "" && errText != "<nil>" {
+		return fmt.Errorf(errText)
+	}
+	return fmt.Errorf("tool reported success=false")
 }
 
 func isBuiltinToolName(name string) bool {

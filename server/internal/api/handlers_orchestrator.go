@@ -15,6 +15,17 @@ import (
 	"github.com/opencrow/opencrow/server/internal/realtime"
 )
 
+// @Summary Run a full orchestrator completion (blocking)
+// @Tags    orchestrator
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body CompleteRequest true "Message and conversation ID"
+// @Success 200 {object} CompleteResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 502 {object} ErrorResponse
+// @Router  /v1/orchestrator/complete [post]
 func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	var req CompleteRequest
@@ -176,6 +187,16 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 
 // buildToolExecutor is defined in tools.go
 
+// @Summary Stream an orchestrator completion via SSE
+// @Tags    orchestrator
+// @Security BearerAuth
+// @Accept  json
+// @Produce text/event-stream
+// @Param   body body CompleteRequest true "Message and conversation ID"
+// @Success 200 {string} string "SSE stream of delta/tool_call/tool_result/done/error events"
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/orchestrator/stream [post]
 func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	var req CompleteRequest
@@ -379,6 +400,13 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// @Summary Get the last realtime event for the current user
+// @Tags    orchestrator
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/realtime/last [get]
 func (s *Server) handleRealtimeLastEvent(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	evt, ok := s.realtimeHub.LastEvent(userID)
@@ -389,6 +417,17 @@ func (s *Server) handleRealtimeLastEvent(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, map[string]any{"event": evt})
 }
 
+// @Summary Regenerate an assistant message via SSE stream
+// @Tags    conversations
+// @Security BearerAuth
+// @Produce text/event-stream
+// @Param   id    path string true "Conversation ID"
+// @Param   msgId path string true "Message ID"
+// @Success 200 {string} string "SSE stream of delta/tool_call/tool_result/done/error events"
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/conversations/{id}/messages/{msgId}/regenerate [post]
 // handleRegenerateMessage re-runs the LLM for a given assistant message in a conversation.
 // It replaces the message content in-place and streams back via SSE.
 func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request) {

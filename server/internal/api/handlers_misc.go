@@ -10,10 +10,25 @@ import (
 	"time"
 )
 
+// @Summary Health check
+// @Tags    health
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Router  /healthz [get]
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, HealthResponse{Status: "ok", Name: "openCrow-server", Env: s.env})
 }
 
+// @Summary Run a shell command on the server
+// @Tags    server
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body RunServerCommandRequest true "Shell command and optional timeout"
+// @Success 200 {object} RunServerCommandResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/server/command [post]
 func (s *Server) handleRunServerCommand(w http.ResponseWriter, r *http.Request) {
 	var req RunServerCommandRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -86,12 +101,28 @@ func (s *Server) handleRunServerCommand(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, status, resp)
 }
 
+// @Summary Get background worker health status
+// @Tags    server
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]WorkerStat
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/status/workers [get]
 // handleWorkerStatus returns the latest health snapshot of all background workers.
 func (s *Server) handleWorkerStatus(w http.ResponseWriter, _ *http.Request) {
 	workers := s.workerStatus.all()
 	writeJSON(w, http.StatusOK, map[string]any{"workers": workers})
 }
 
+// @Summary Get recent log lines for a background worker
+// @Tags    server
+// @Security BearerAuth
+// @Produce json
+// @Param   worker query string true "Worker name (task-worker, heartbeat-worker, email-worker)"
+// @Success 200 {object} map[string][]WorkerLogEntry
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/workers/logs [get]
 // handleWorkerLogs returns recent log lines for a specific worker.
 // Query param: worker=task-worker|heartbeat-worker|email-worker
 func (s *Server) handleWorkerLogs(w http.ResponseWriter, r *http.Request) {

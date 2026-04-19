@@ -343,11 +343,38 @@ func callMCPToolOnServer(ctx context.Context, serverURL string, headers map[stri
 		return nil, fmt.Errorf("tools/call rpc error: %w", err)
 	}
 
-	var parsed struct {
-		Result any `json:"result"`
+	var envelope struct {
+		Result json.RawMessage `json:"result"`
 	}
-	if err := json.Unmarshal(callJSON, &parsed); err != nil {
+	if err := json.Unmarshal(callJSON, &envelope); err != nil {
 		return nil, fmt.Errorf("parse tools/call response: %w", err)
 	}
-	return parsed.Result, nil
+	if len(envelope.Result) == 0 {
+		return nil, fmt.Errorf("tools/call response missing result")
+	}
+	var toolResult struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+		IsError bool `json:"isError"`
+	}
+	if err := json.Unmarshal(envelope.Result, &toolResult); err == nil && toolResult.IsError {
+		parts := make([]string, 0, len(toolResult.Content))
+		for _, item := range toolResult.Content {
+			if strings.TrimSpace(item.Text) == "" {
+				continue
+			}
+			parts = append(parts, item.Text)
+		}
+		if len(parts) == 0 {
+			return nil, fmt.Errorf("tools/call returned isError=true")
+		}
+		return nil, fmt.Errorf(strings.Join(parts, "\n"))
+	}
+	var parsed any
+	if err := json.Unmarshal(envelope.Result, &parsed); err != nil {
+		return nil, fmt.Errorf("parse tools/call result: %w", err)
+	}
+	return parsed, nil
 }

@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// @Summary List all conversations for the current user
+// @Tags    conversations
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]ConversationDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/conversations [get]
 func (s *Server) handleListConversations(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	conversations, err := s.listConversations(r.Context(), userID)
@@ -18,6 +25,16 @@ func (s *Server) handleListConversations(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, map[string]any{"conversations": conversations})
 }
 
+// @Summary Create a new conversation
+// @Tags    conversations
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body CreateConversationRequest true "Conversation title"
+// @Success 201 {object} ConversationDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/conversations [post]
 func (s *Server) handleCreateConversation(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	var req CreateConversationRequest
@@ -35,6 +52,16 @@ func (s *Server) handleCreateConversation(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusCreated, conversation)
 }
 
+// @Summary Get a conversation by ID
+// @Tags    conversations
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Conversation ID"
+// @Success 200 {object} ConversationDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/conversations/{id} [get]
 func (s *Server) handleGetConversation(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	conversationID := r.PathValue("id")
@@ -56,6 +83,18 @@ func (s *Server) handleGetConversation(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, conversation)
 }
 
+// @Summary Update a conversation's title
+// @Tags    conversations
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   id   path string                    true "Conversation ID"
+// @Param   body body UpdateConversationRequest true "Updated title"
+// @Success 200 {object} ConversationDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/conversations/{id} [patch]
 func (s *Server) handleUpdateConversation(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	conversationID := r.PathValue("id")
@@ -84,6 +123,16 @@ func (s *Server) handleUpdateConversation(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, conversation)
 }
 
+// @Summary Delete a conversation by ID
+// @Tags    conversations
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Conversation ID"
+// @Success 204
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/conversations/{id} [delete]
 func (s *Server) handleDeleteConversation(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	conversationID := r.PathValue("id")
@@ -102,6 +151,15 @@ func (s *Server) handleDeleteConversation(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// @Summary List messages in a conversation
+// @Tags    conversations
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Conversation ID"
+// @Success 200 {object} map[string][]MessageDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/conversations/{id}/messages [get]
 func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	conversationID := r.PathValue("id")
@@ -118,6 +176,18 @@ func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"messages": messages})
 }
 
+// @Summary Add a message to a conversation
+// @Tags    conversations
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   id   path string               true "Conversation ID"
+// @Param   body body CreateMessageRequest true "Message role and content"
+// @Success 201 {object} MessageDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/conversations/{id}/messages [post]
 func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	conversationID := r.PathValue("id")
@@ -156,6 +226,15 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, message)
 }
 
+// @Summary List tool calls for a conversation
+// @Tags    conversations
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Conversation ID"
+// @Success 200 {object} map[string][]ToolCallRecord
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/conversations/{id}/tool-calls [get]
 func (s *Server) handleListToolCalls(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	conversationID := r.PathValue("id")

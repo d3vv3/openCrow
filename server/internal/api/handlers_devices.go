@@ -4,6 +4,13 @@ import (
 	"net/http"
 )
 
+// @Summary List device registrations for the current user
+// @Tags    devices
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]DeviceRegistrationDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices/registrations [get]
 func (s *Server) handleListDeviceRegistrations(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	regs, err := s.listDeviceRegistrations(r.Context(), userID)
@@ -18,6 +25,17 @@ func (s *Server) handleListDeviceRegistrations(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, map[string]any{"registrations": list})
 }
 
+// @Summary Register a device with its capabilities
+// @Tags    devices
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   id   path string                true "Device ID (session ID)"
+// @Param   body body RegisterDeviceRequest true "Device capabilities"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices/{id}/register [post]
 func (s *Server) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	deviceID := r.PathValue("id")
@@ -47,6 +65,14 @@ func (s *Server) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary List device tasks (optionally filtered by target device)
+// @Tags    devices
+// @Security BearerAuth
+// @Produce json
+// @Param   target query string false "Filter by target device ID"
+// @Success 200 {object} map[string][]DeviceTaskDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices/tasks [get]
 func (s *Server) handleListDeviceTasks(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	target := r.URL.Query().Get("target")
@@ -69,6 +95,16 @@ func (s *Server) handleListDeviceTasks(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"tasks": tasks})
 }
 
+// @Summary Create a task for a target device
+// @Tags    devices
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body CreateDeviceTaskRequest true "Target device and instruction"
+// @Success 201 {object} DeviceTaskDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices/tasks [post]
 func (s *Server) handleCreateDeviceTask(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	var req CreateDeviceTaskRequest
@@ -88,6 +124,17 @@ func (s *Server) handleCreateDeviceTask(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, dto)
 }
 
+// @Summary Mark a device task as complete
+// @Tags    devices
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   id   path string                    true "Task ID"
+// @Param   body body CompleteDeviceTaskRequest true "Success flag and output"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices/tasks/{id}/complete [post]
 func (s *Server) handleCompleteDeviceTask(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	taskID := r.PathValue("id")
@@ -103,6 +150,14 @@ func (s *Server) handleCompleteDeviceTask(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// @Summary Delete a device task by ID
+// @Tags    devices
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Task ID"
+// @Success 204
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices/tasks/{id} [delete]
 func (s *Server) handleDeleteDeviceTask(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	taskID := r.PathValue("id")

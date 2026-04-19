@@ -331,3 +331,30 @@ type DeviceRegistrationDTO struct {
 	Capabilities []DeviceCapability `json:"capabilities"`
 	LastSeenAt   string             `json:"lastSeenAt"`
 }
+
+// CreateDeviceTokensRequest is the request body for POST /v1/auth/device-tokens.
+type CreateDeviceTokensRequest struct {
+	DeviceLabel string `json:"deviceLabel"`
+}
+
+// TestTelegramBotRequest is the request body for POST /v1/telegram/test.
+type TestTelegramBotRequest struct {
+	BotToken           string `json:"botToken"`
+	NotificationChatID string `json:"notificationChatId,omitempty"`
+}
+
+// EmailAutoconfigRequest is the request body for POST /v1/email/autoconfig.
+type EmailAutoconfigRequest struct {
+	Email string `json:"email"`
+}
+
+// EmailAutoconfigResult is the response body for POST /v1/email/autoconfig.
+type EmailAutoconfigResult struct {
+	ImapHost     string `json:"imapHost,omitempty"`
+	ImapPort     int    `json:"imapPort,omitempty"`
+	ImapUsername string `json:"imapUsername,omitempty"`
+	SmtpHost     string `json:"smtpHost,omitempty"`
+	SmtpPort     int    `json:"smtpPort,omitempty"`
+	UseTLS       bool   `json:"useTls"`
+	Source       string `json:"source,omitempty"`
+}

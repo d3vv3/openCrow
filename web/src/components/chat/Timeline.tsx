@@ -66,8 +66,18 @@ export function ToolCallItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boole
           {primaryVal && (
             <span className="text-[#f8f8f2]/60 truncate flex-1">{primaryVal.slice(0, 80)}</span>
           )}
-          <span className="text-[#6272a4] shrink-0 ml-auto">{formatTime(tc.createdAt)}</span>
-          {isLive && <span className="text-[#6272a4] animate-pulse shrink-0">...</span>}
+          {!isLive &&
+            (tc.error ? (
+              <span className="shrink-0 ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-[#ff5555]/15 text-[#ff5555] border border-[#ff5555]/30">
+                failed
+              </span>
+            ) : (
+              <span className="shrink-0 ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-[#50fa7b]/15 text-[#50fa7b] border border-[#50fa7b]/30">
+                ok
+              </span>
+            ))}
+          <span className="text-[#6272a4] shrink-0">{formatTime(tc.createdAt)}</span>
+          {isLive && <span className="text-[#6272a4] animate-pulse shrink-0 ml-auto">...</span>}
           <span className="text-[#6272a4] shrink-0 ml-1">{isExpanded ? "▲" : "▼"}</span>
         </div>
 

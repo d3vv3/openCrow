@@ -17,6 +17,13 @@ import (
 	"github.com/opencrow/opencrow/server/internal/realtime"
 )
 
+// @Summary List email inboxes for the current user
+// @Tags    email
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]EmailInboxDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/email/inboxes [get]
 func (s *Server) handleListEmailInboxes(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	inboxes, err := s.listEmailInboxes(r.Context(), userID)
@@ -27,6 +34,16 @@ func (s *Server) handleListEmailInboxes(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"inboxes": inboxes})
 }
 
+// @Summary Create a new email inbox
+// @Tags    email
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body CreateEmailInboxRequest true "Inbox configuration"
+// @Success 201 {object} EmailInboxDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/email/inboxes [post]
 func (s *Server) handleCreateEmailInbox(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	var req CreateEmailInboxRequest
@@ -70,6 +87,18 @@ func (s *Server) handleCreateEmailInbox(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, inbox)
 }
 
+// @Summary Update an email inbox by ID
+// @Tags    email
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   id   path string                 true "Inbox ID"
+// @Param   body body UpdateEmailInboxRequest true "Fields to update"
+// @Success 200 {object} EmailInboxDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/email/inboxes/{id} [patch]
 func (s *Server) handleUpdateEmailInbox(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	inboxID := r.PathValue("id")
@@ -97,6 +126,16 @@ func (s *Server) handleUpdateEmailInbox(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, inbox)
 }
 
+// @Summary Delete an email inbox by ID
+// @Tags    email
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Inbox ID"
+// @Success 200 {object} map[string]bool
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/email/inboxes/{id} [delete]
 func (s *Server) handleDeleteEmailInbox(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	inboxID := r.PathValue("id")
@@ -117,6 +156,13 @@ func (s *Server) handleDeleteEmailInbox(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": true})
 }
 
+// @Summary List email poll events for the current user
+// @Tags    email
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]EmailPollEventDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/email/poll-events [get]
 func (s *Server) handleListEmailPollEvents(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	events, err := s.listEmailPollEvents(r.Context(), userID)
@@ -127,6 +173,17 @@ func (s *Server) handleListEmailPollEvents(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
+// @Summary Trigger an email poll for an inbox
+// @Tags    email
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body TriggerEmailPollRequest true "Inbox ID and optional detail"
+// @Success 201 {object} map[string]EmailPollEventDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/email/poll [post]
 func (s *Server) handleTriggerEmailPoll(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	var req TriggerEmailPollRequest
@@ -161,6 +218,16 @@ func (s *Server) handleTriggerEmailPoll(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, map[string]any{"event": evt})
 }
 
+// @Summary Test an IMAP email connection
+// @Tags    email
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body TestEmailConnectionRequest true "IMAP connection details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/email/test [post]
 func (s *Server) handleTestEmailConnection(w http.ResponseWriter, r *http.Request) {
 	var req TestEmailConnectionRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -239,6 +306,16 @@ func (s *Server) handleTestEmailConnection(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "detail": "connected"})
 }
 
+// @Summary Auto-detect IMAP/SMTP settings for an email address
+// @Tags    email
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body EmailAutoconfigRequest true "Email address to look up"
+// @Success 200 {object} EmailAutoconfigResult
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/email/autoconfig [post]
 func (s *Server) handleEmailAutoconfig(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email string `json:"email"`

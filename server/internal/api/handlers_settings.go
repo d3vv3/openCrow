@@ -15,6 +15,13 @@ import (
 	"github.com/opencrow/opencrow/server/internal/orchestrator"
 )
 
+// @Summary Get user settings
+// @Tags    config
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} UserSettingsDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/settings [get]
 func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	settings, err := s.getSettings(r.Context(), userID)
@@ -25,6 +32,16 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, settings)
 }
 
+// @Summary Update user settings
+// @Tags    config
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body UpdateSettingsRequest true "Settings map"
+// @Success 200 {object} UserSettingsDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/settings [put]
 func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	var req UpdateSettingsRequest
@@ -45,6 +62,13 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, settings)
 }
 
+// @Summary Get full user config (providers, tools, integrations, etc.)
+// @Tags    config
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} configstore.UserConfig
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/config [get]
 func (s *Server) handleGetUserConfig(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 
@@ -68,6 +92,16 @@ func (s *Server) handleGetUserConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, cfg)
 }
 
+// @Summary Replace full user config
+// @Tags    config
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body configstore.UserConfig true "Full user config"
+// @Success 200 {object} configstore.UserConfig
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/config [put]
 func (s *Server) handlePutUserConfig(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 
@@ -136,6 +170,16 @@ type ProviderModelsResponse struct {
 	Error  string   `json:"error,omitempty"`
 }
 
+// @Summary Test an LLM provider configuration
+// @Tags    config
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body ProviderTestRequest true "Provider connection details"
+// @Success 200 {object} ProviderTestResult
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/providers/test [post]
 func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 	var req ProviderTestRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -272,6 +316,16 @@ func fetchOpenAICompatibleModels(ctx context.Context, kind, baseURL, apiKey stri
 	return models, nil
 }
 
+// @Summary Probe available models from a provider
+// @Tags    config
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body ProviderModelsRequest true "Provider kind and credentials"
+// @Success 200 {object} ProviderModelsResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/providers/models [post]
 func (s *Server) handleProbeProviderModels(w http.ResponseWriter, r *http.Request) {
 	var req ProviderModelsRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -304,6 +358,13 @@ type ProviderStatusEntry struct {
 	Error     string `json:"error,omitempty"`
 }
 
+// @Summary Get connectivity status for all configured providers
+// @Tags    config
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]ProviderStatusEntry
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/providers/status [get]
 func (s *Server) handleProvidersStatus(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 
@@ -350,6 +411,16 @@ func (s *Server) handleProvidersStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"providers": results})
 }
 
+// @Summary Test an MCP server connection and list its tools
+// @Tags    config
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body MCPServerTestRequest true "MCP server URL and headers"
+// @Success 200 {object} MCPServerTestResult
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/mcp/test [post]
 func (s *Server) handleTestMCPServer(w http.ResponseWriter, r *http.Request) {
 	var req MCPServerTestRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -588,6 +659,13 @@ func mcpJSONRPCError(body []byte) error {
 	return fmt.Errorf("code %d: %s", payload.Error.Code, payload.Error.Message)
 }
 
+// @Summary Get tool configuration for the current user
+// @Tags    config
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} configstore.ToolsConfig
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/tools [get]
 func (s *Server) handleGetToolsConfig(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 
@@ -605,6 +683,16 @@ func (s *Server) handleGetToolsConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, cfg.Tools)
 }
 
+// @Summary Update tool configuration for the current user
+// @Tags    config
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body configstore.ToolsConfig true "Tools config"
+// @Success 200 {object} configstore.ToolsConfig
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/tools [put]
 func (s *Server) handlePutToolsConfig(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 
@@ -635,6 +723,13 @@ func (s *Server) handlePutToolsConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, saved.Tools)
 }
 
+// @Summary Get skills configuration for the current user
+// @Tags    config
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} configstore.SkillsConfig
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/skills [get]
 func (s *Server) handleGetSkillsConfig(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 
@@ -652,6 +747,16 @@ func (s *Server) handleGetSkillsConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, cfg.Skills)
 }
 
+// @Summary Update skills configuration for the current user
+// @Tags    config
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body configstore.SkillsConfig true "Skills config"
+// @Success 200 {object} configstore.SkillsConfig
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/skills [put]
 func (s *Server) handlePutSkillsConfig(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 
@@ -682,6 +787,16 @@ func (s *Server) handlePutSkillsConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, saved.Skills)
 }
 
+// @Summary Test a Telegram bot token
+// @Tags    config
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body TestTelegramBotRequest true "Bot token and optional notification chat ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/telegram/test [post]
 // handleTestTelegramBot verifies a bot token by calling getMe and optionally sends a test message.
 func (s *Server) handleTestTelegramBot(w http.ResponseWriter, r *http.Request) {
 	var req struct {

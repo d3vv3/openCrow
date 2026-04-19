@@ -2,6 +2,9 @@ package api
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -382,5 +385,71 @@ func TestExecuteTool_UnknownTool(t *testing.T) {
 	}
 	if m["success"] != false {
 		t.Error("expected failure for unknown tool")
+	}
+}
+
+func TestToolResultError(t *testing.T) {
+	tests := []struct {
+		name   string
+		result any
+		want   string
+	}{
+		{name: "non-map", result: "ok"},
+		{name: "missing success", result: map[string]any{"value": 1}},
+		{name: "success true", result: map[string]any{"success": true}},
+		{name: "success false with error", result: map[string]any{"success": false, "error": "boom"}, want: "boom"},
+		{name: "success false without error", result: map[string]any{"success": false}, want: "tool reported success=false"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := toolResultError(tt.result)
+			if tt.want == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error %q", tt.want)
+			}
+			if err.Error() != tt.want {
+				t.Fatalf("error = %q, want %q", err.Error(), tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildToolExecutor_PropagatesToolPayloadFailure(t *testing.T) {
+	s := &Server{}
+	execTool := s.buildToolExecutor(context.Background(), "u1")
+	_, err := execTool(context.Background(), "nonexistent_tool", nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if err.Error() != "unknown tool: nonexistent_tool" {
+		t.Fatalf("error = %q", err.Error())
+	}
+}
+
+func TestCallMCPToolOnServer_IsErrorResult(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		w.Header().Set("Content-Type", "application/json")
+		if r.Header.Get("Mcp-Session-Id") == "" {
+			w.Header().Set("Mcp-Session-Id", "test-session")
+			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"init-1","result":{}}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"call-1","result":{"content":[{"type":"text","text":"command failed"}],"isError":true}}`))
+	}))
+	defer ts.Close()
+
+	_, err := callMCPToolOnServer(context.Background(), ts.URL, nil, "demo", map[string]any{"x": 1})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "command failed") {
+		t.Fatalf("error = %q", err.Error())
 	}
 }

@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// @Summary List all memory entries for the current user
+// @Tags    memory
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]MemoryDTO
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/memory [get]
 func (s *Server) handleListMemories(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	memories, err := s.listMemories(r.Context(), userID)
@@ -18,6 +25,16 @@ func (s *Server) handleListMemories(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"memories": memories})
 }
 
+// @Summary Create a new memory entry
+// @Tags    memory
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   body body CreateMemoryRequest true "Memory entry"
+// @Success 201 {object} MemoryDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/memory [post]
 func (s *Server) handleCreateMemory(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	var req CreateMemoryRequest
@@ -48,6 +65,16 @@ func (s *Server) handleCreateMemory(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, memory)
 }
 
+// @Summary Delete a memory entry by ID
+// @Tags    memory
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Memory ID"
+// @Success 200 {object} map[string]bool
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/memory/{id} [delete]
 func (s *Server) handleDeleteMemory(w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(r.Context())
 	memID := r.PathValue("id")
