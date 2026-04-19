@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import QRCode from "react-qr-code";
 import type { UserConfig, CompanionAppConfig, DeviceTaskDTO, DeviceRegistration } from "@/lib/api";
 import { endpoints, getApiBase } from "@/lib/api";
@@ -52,13 +52,15 @@ function CompanionAppCard({
 }) {
   const [generating, setGenerating] = useState(false);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(false);
 
-  const isOnline = useMemo(
-    () => registration
-      ? Date.now() - new Date(registration.lastSeenAt).getTime() < 10 * 60 * 1000
-      : false,
-    [registration],
-  );
+  useEffect(() => {
+    setIsOnline(
+      registration
+        ? Date.now() - new Date(registration.lastSeenAt).getTime() < 10 * 60 * 1000
+        : false,
+    );
+  }, [registration]);
 
   const handleRepair = async () => {
     setGenerating(true);

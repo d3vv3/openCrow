@@ -3,9 +3,17 @@ package api
 import (
 	"bytes"
 	"context"
+	"os"
 	"testing"
 	"time"
 )
+
+func requireSandbox(t *testing.T) {
+	t.Helper()
+	if _, err := os.Stat(sandboxRoot); os.IsNotExist(err) {
+		t.Skipf("sandbox not available at %s", sandboxRoot)
+	}
+}
 
 func TestIsCommandBlocked(t *testing.T) {
 	blocked := []string{
@@ -54,6 +62,7 @@ func TestIsCommandBlocked(t *testing.T) {
 }
 
 func TestExecuteShellCommand_Echo(t *testing.T) {
+	requireSandbox(t)
 	result := executeShellCommand(context.Background(), "/bin/sh", "echo hello", 5*time.Second, "", nil)
 	if result["success"] != true {
 		t.Fatalf("expected success, got %v (stderr: %v)", result["success"], result["stderr"])
@@ -71,6 +80,7 @@ func TestExecuteShellCommand_Echo(t *testing.T) {
 }
 
 func TestExecuteShellCommand_Failure(t *testing.T) {
+	requireSandbox(t)
 	result := executeShellCommand(context.Background(), "/bin/sh", "exit 42", 5*time.Second, "", nil)
 	if result["success"] != false {
 		t.Error("expected failure")
@@ -81,6 +91,7 @@ func TestExecuteShellCommand_Failure(t *testing.T) {
 }
 
 func TestExecuteShellCommand_Blocked(t *testing.T) {
+	requireSandbox(t)
 	result := executeShellCommand(context.Background(), "/bin/sh", "rm -rf /", 5*time.Second, "", nil)
 	if result["success"] != false {
 		t.Error("expected blocked")
@@ -92,6 +103,7 @@ func TestExecuteShellCommand_Blocked(t *testing.T) {
 }
 
 func TestExecuteShellCommand_Timeout(t *testing.T) {
+	requireSandbox(t)
 	result := executeShellCommand(context.Background(), "/bin/sh", "sleep 10", 100*time.Millisecond, "", nil)
 	if result["timed_out"] != true {
 		t.Error("expected timed_out")
@@ -104,7 +116,7 @@ func TestExecuteShellCommand_Timeout(t *testing.T) {
 }
 
 func TestExecuteShellCommand_DefaultTimeout(t *testing.T) {
-	// timeout 0 should default to shellDefaultTimeout, not hang
+	requireSandbox(t)
 	result := executeShellCommand(context.Background(), "/bin/sh", "echo ok", 0, "", nil)
 	if result["success"] != true {
 		t.Errorf("expected success with default timeout")
@@ -112,7 +124,7 @@ func TestExecuteShellCommand_DefaultTimeout(t *testing.T) {
 }
 
 func TestExecuteShellCommand_MaxTimeout(t *testing.T) {
-	// timeout > max should be capped (we just verify it doesn't crash)
+	requireSandbox(t)
 	result := executeShellCommand(context.Background(), "/bin/sh", "echo capped", 999*time.Second, "", nil)
 	if result["success"] != true {
 		t.Error("expected success")
@@ -120,6 +132,7 @@ func TestExecuteShellCommand_MaxTimeout(t *testing.T) {
 }
 
 func TestExecuteShellCommand_WorkingDir(t *testing.T) {
+	requireSandbox(t)
 	result := executeShellCommand(context.Background(), "/bin/sh", "pwd", 5*time.Second, "/tmp", nil)
 	if result["success"] != true {
 		t.Fatalf("expected success")
@@ -131,6 +144,7 @@ func TestExecuteShellCommand_WorkingDir(t *testing.T) {
 }
 
 func TestExecuteShellCommand_EnvVars(t *testing.T) {
+	requireSandbox(t)
 	env := map[string]string{"MY_VAR": "hello123"}
 	result := executeShellCommand(context.Background(), "/bin/sh", "echo $MY_VAR", 5*time.Second, "", env)
 	// Note: env vars may not propagate to subshell without explicit setup
@@ -141,8 +155,8 @@ func TestExecuteShellCommand_EnvVars(t *testing.T) {
 }
 
 func TestExecuteShellCommand_BlockedEnvVar(t *testing.T) {
+	requireSandbox(t)
 	env := map[string]string{"PATH": "/evil", "SAFE_VAR": "ok"}
-	// Should filter PATH but not crash
 	result := executeShellCommand(context.Background(), "/bin/sh", "echo test", 5*time.Second, "", env)
 	if result["timed_out"] == true {
 		t.Error("should not timeout")
@@ -150,6 +164,7 @@ func TestExecuteShellCommand_BlockedEnvVar(t *testing.T) {
 }
 
 func TestProcessManager_StartAndList(t *testing.T) {
+	requireSandbox(t)
 	pm := NewProcessManager()
 	result := pm.StartBackground(context.Background(), "/bin/sh", "echo bg-test", 5*time.Second, "", nil)
 	if result["success"] != true {
@@ -171,6 +186,7 @@ func TestProcessManager_StartAndList(t *testing.T) {
 }
 
 func TestProcessManager_Log(t *testing.T) {
+	requireSandbox(t)
 	pm := NewProcessManager()
 	result := pm.StartBackground(context.Background(), "/bin/sh", "echo line1; echo line2; echo line3", 5*time.Second, "", nil)
 	sessionID, _ := result["session_id"].(string)
@@ -196,6 +212,7 @@ func TestProcessManager_LogUnknown(t *testing.T) {
 }
 
 func TestProcessManager_Kill(t *testing.T) {
+	requireSandbox(t)
 	pm := NewProcessManager()
 	result := pm.StartBackground(context.Background(), "/bin/sh", "sleep 60", 120*time.Second, "", nil)
 	sessionID, _ := result["session_id"].(string)
@@ -223,6 +240,7 @@ func TestProcessManager_KillUnknown(t *testing.T) {
 }
 
 func TestProcessManager_Remove(t *testing.T) {
+	requireSandbox(t)
 	pm := NewProcessManager()
 	result := pm.StartBackground(context.Background(), "/bin/sh", "echo done", 5*time.Second, "", nil)
 	sessionID, _ := result["session_id"].(string)
@@ -250,6 +268,7 @@ func TestProcessManager_RemoveUnknown(t *testing.T) {
 }
 
 func TestProcessManager_RemoveRunning(t *testing.T) {
+	requireSandbox(t)
 	pm := NewProcessManager()
 	result := pm.StartBackground(context.Background(), "/bin/sh", "sleep 60", 120*time.Second, "", nil)
 	sessionID, _ := result["session_id"].(string)
@@ -263,6 +282,7 @@ func TestProcessManager_RemoveRunning(t *testing.T) {
 }
 
 func TestProcessManager_Blocked(t *testing.T) {
+	requireSandbox(t)
 	pm := NewProcessManager()
 	result := pm.StartBackground(context.Background(), "/bin/sh", "rm -rf /", 5*time.Second, "", nil)
 	if result["success"] != false {
