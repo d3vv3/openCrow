@@ -22,6 +22,7 @@ export const TABS = [
   { key: "email", label: "Email" },
   { key: "servers", label: "Servers" },
   { key: "channels", label: "Channels" },
+  { key: "devices", label: "Devices" },
   { key: "tools", label: "Tools" },
   { key: "skills", label: "Skills" },
   { key: "mcp", label: "MCP" },
@@ -53,6 +54,7 @@ export const emptyEmailAccount: EmailAccountConfig = {
   smtpPort: 587,
   tls: true,
   enabled: true,
+  pollIntervalSeconds: 900,
 };
 
 export const emptyGolangTool: GolangToolEntry = {

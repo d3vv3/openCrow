@@ -38,6 +38,12 @@ export type {
   ServerUserConfig,
   ConversationsResponse,
   MessagesResponse,
+  DeviceTaskDTO,
+  CreateDeviceTaskRequest,
+  CompleteDeviceTaskRequest,
+  CompanionAppConfig,
+  DeviceCapability,
+  DeviceRegistration,
 } from "./api-types";
 
 import type {
@@ -64,6 +70,12 @@ import type {
   ServerUserConfig,
   ConversationsResponse,
   MessagesResponse,
+  DeviceTaskDTO,
+  CreateDeviceTaskRequest,
+  CompleteDeviceTaskRequest,
+  CompanionAppConfig,
+  DeviceCapability,
+  DeviceRegistration,
 } from "./api-types";
 
 const API_BASE =
@@ -235,6 +247,7 @@ function normalizeUserConfig(raw: ServerUserConfig): UserConfig {
       })),
       telegramBots: Array.isArray(raw?.integrations?.telegramBots) ? raw.integrations!.telegramBots : [],
       sshServers: Array.isArray(raw?.integrations?.sshServers) ? raw.integrations!.sshServers : [],
+      companionApps: Array.isArray(raw?.integrations?.companionApps) ? raw.integrations!.companionApps : [],
       defaultNotificationBotId: raw?.integrations?.defaultNotificationBotId ?? "",
     },
     tools: {
@@ -298,6 +311,7 @@ function toServerUserConfig(config: UserConfig): ServerUserConfig {
       })),
       telegramBots: config.integrations.telegramBots ?? [],
       sshServers: config.integrations.sshServers ?? [],
+      companionApps: config.integrations.companionApps ?? [],
       defaultNotificationBotId: config.integrations.defaultNotificationBotId ?? "",
     },
     tools: {
@@ -648,4 +662,23 @@ export const endpoints = {
   deleteTask: (id: string) => api(`/v1/tasks/${id}`, { method: "DELETE" }),
   updateTask: (id: string, patch: { description?: string; prompt?: string; executeAt?: string; cronExpression?: string | null; status?: string }) =>
     api<TaskDTO>(`/v1/tasks/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+
+  // Device Tasks
+  listDeviceTasks: () => api<{ tasks: DeviceTaskDTO[] }>("/v1/devices/tasks"),
+  createDeviceTask: (req: CreateDeviceTaskRequest) => api<DeviceTaskDTO>("/v1/devices/tasks", { method: "POST", body: JSON.stringify(req) }),
+  deleteDeviceTask: (id: string) => api(`/v1/devices/tasks/${id}`, { method: "DELETE" }),
+  completeDeviceTask: (id: string, req: CompleteDeviceTaskRequest) => api(`/v1/devices/tasks/${id}/complete`, { method: "POST", body: JSON.stringify(req) }),
+
+  // Device Registration
+  registerDevice: (deviceId: string, capabilities: DeviceCapability[]) =>
+    api<DeviceRegistration>(`/v1/devices/${deviceId}/register`, { method: "POST", body: JSON.stringify({ capabilities }) }),
+  listDeviceRegistrations: () =>
+    api<{ registrations: DeviceRegistration[] }>("/v1/devices/registrations"),
+
+  // Device Pairing
+  createDeviceTokens: (deviceLabel: string) =>
+    api<{ tokens: { accessToken: string; refreshToken: string } }>("/v1/auth/device-tokens", {
+      method: "POST",
+      body: JSON.stringify({ deviceLabel }),
+    }),
 };

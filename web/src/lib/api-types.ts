@@ -111,6 +111,24 @@ export interface TelegramBotConfig {
   lastUpdateId?: number;
 }
 
+export interface DeviceCapability {
+  name: string;
+  description?: string;
+}
+
+export interface DeviceRegistration {
+  deviceId: string;
+  capabilities: DeviceCapability[];
+  lastSeenAt: string;
+}
+
+export interface CompanionAppConfig {
+  id?: string;
+  name: string;
+  label?: string;
+  enabled: boolean;
+}
+
 export interface EmailAccountConfig {
   id?: string;
   label: string;
@@ -123,6 +141,7 @@ export interface EmailAccountConfig {
   smtpPort: number;
   tls: boolean;
   enabled: boolean;
+  pollIntervalSeconds?: number;
 }
 
 export interface ToolParameter {
@@ -201,6 +220,26 @@ export interface TaskDTO {
   updatedAt: string;
 }
 
+export interface DeviceTaskDTO {
+  id: string;
+  targetDevice: string;
+  instruction: string;
+  status: string;
+  resultOutput?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt?: string | null;
+}
+
+export interface CreateDeviceTaskRequest {
+  targetDevice: string;
+  instruction: string;
+}
+
+export interface CompleteDeviceTaskRequest {
+  resultOutput: string;
+}
+
 export interface ScheduleEntry {
   id?: string;
   description: string;
@@ -272,7 +311,7 @@ export interface ProviderModelsProbeResult {
 }
 
 export interface UserConfig {
-  integrations: { emailAccounts: EmailAccountConfig[]; telegramBots: TelegramBotConfig[]; sshServers: SSHServerConfig[]; defaultNotificationBotId: string };
+  integrations: { emailAccounts: EmailAccountConfig[]; telegramBots: TelegramBotConfig[]; sshServers: SSHServerConfig[]; companionApps: CompanionAppConfig[]; defaultNotificationBotId: string };
   tools: {
     definitions: ToolDefinition[];
     golangTools: GolangToolEntry[];
@@ -291,7 +330,7 @@ export interface UserConfig {
 // ─── Internal server shape (for normalization) ───
 
 export interface ServerUserConfig {
-  integrations?: { emailAccounts?: Array<EmailAccountConfig & { useTls?: boolean }>; telegramBots?: TelegramBotConfig[]; sshServers?: SSHServerConfig[]; defaultNotificationBotId?: string };
+  integrations?: { emailAccounts?: Array<EmailAccountConfig & { useTls?: boolean }>; telegramBots?: TelegramBotConfig[]; sshServers?: SSHServerConfig[]; companionApps?: CompanionAppConfig[]; defaultNotificationBotId?: string };
   tools?: {
     definitions?: ToolDefinition[];
     golangTools?: GolangToolEntry[];

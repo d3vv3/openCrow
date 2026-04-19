@@ -47,7 +47,9 @@ func isBuiltinToolName(name string) bool {
 		"web_search", "open_url",
 		"store_memory", "forget_memory", "learn_memory", "read_memory", "reinforce_memory", "promote_learning",
 		"list_tasks", "schedule_task", "cancel_task",
-		"configure_heartbeat", "trigger_heartbeat",
+		"configure_heartbeat", "trigger_heartbeat", "queue_device_action",
+		"list_devices", "create_device", "delete_device", "edit_device",
+		"list_device_tasks", "get_device_capabilities",
 		"setup_email", "check_email", "read_email", "reply_email", "compose_email", "search_email",
 		"send_notification", "setup_telegram_bot",
 		"execute_shell_command", "manage_process",
@@ -114,6 +116,27 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 
 	case "trigger_heartbeat":
 		return s.toolTriggerHeartbeat(ctx, userID)
+
+	case "queue_device_action":
+		return s.toolQueueDeviceAction(ctx, userID, args)
+
+	case "list_devices":
+		return s.toolListDevices(ctx, userID)
+
+	case "create_device":
+		return s.toolCreateDevice(ctx, userID, args)
+
+	case "delete_device":
+		return s.toolDeleteDevice(ctx, userID, args)
+
+	case "edit_device":
+		return s.toolEditDevice(ctx, userID, args)
+
+	case "list_device_tasks":
+		return s.toolListDeviceTasks(ctx, userID, args)
+
+	case "get_device_capabilities":
+		return s.toolGetDeviceCapabilities(ctx, userID, args)
 
 	// ── Email ────────────────────────────────────────────────────────
 	case "setup_email":

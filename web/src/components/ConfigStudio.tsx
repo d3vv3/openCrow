@@ -60,6 +60,7 @@ import { EmailTab } from "@/components/config/EmailTab";
 import { SchedulesTab } from "@/components/config/SchedulesTab";
 import { ServersTab } from "@/components/config/ServersTab";
 import { TelegramTab } from "@/components/config/TelegramTab";
+import { DevicesTab } from "@/components/config/DevicesTab";
 
 export default function ConfigStudio({ requestedTab }: { requestedTab?: string }) {
   const [config, setConfig] = useState<UserConfig | null>(null);
@@ -570,6 +571,7 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
   const renderEmail = () => <EmailTab config={config} updateConfig={updateConfig} saving={saving} saveFullConfig={saveFullConfig} saveStatus={saveStatus} setError={setError} />;
   const renderServers = () => <ServersTab config={config} updateConfig={updateConfig} saving={saving} saveFullConfig={saveFullConfig} saveStatus={saveStatus} />;
   const renderTelegram = () => <TelegramTab config={config} updateConfig={updateConfig} saving={saving} saveFullConfig={saveFullConfig} saveStatus={saveStatus} />;
+  const renderDevices = () => <DevicesTab config={config} updateConfig={updateConfig} saving={saving} saveFullConfig={saveFullConfig} saveStatus={saveStatus} />;
 
   const renderHeartbeat = () => {
     const providerOptions = [
@@ -612,6 +614,7 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
     email: renderEmail,
     servers: renderServers,
     channels: renderTelegram,
+    devices: renderDevices,
     tools: renderTools,
     skills: renderSkills,
     mcp: renderMCP,

@@ -207,3 +207,30 @@ func clientTimezoneFromContext(ctx context.Context) string {
 	tz, _ := ctx.Value(clientTimezoneContextKey).(string)
 	return strings.TrimSpace(tz)
 }
+
+func (s *Server) handleCreateDeviceTokens(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := userIDFromContext(ctx)
+
+	var req struct {
+		DeviceLabel string `json:"deviceLabel"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+
+	label := strings.TrimSpace(req.DeviceLabel)
+	if label == "" {
+		label = "Companion App"
+	}
+
+	tokens, err := s.createSessionAndTokens(ctx, userID, label)
+	if err != nil {
+		log.Printf("handleCreateDeviceTokens failed user_id=%s device_label=%q err=%v", userID, label, err)
+		writeError(w, http.StatusInternalServerError, "unable to create device session")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"tokens": tokens})
+}

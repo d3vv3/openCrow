@@ -107,7 +107,7 @@ var defaultTools = []ToolDefinition{
 		Source:      "builtin",
 		Parameters:  []ToolParameter{{Name: "memoryId", Type: "string", Description: "Memory ID", Required: true}},
 	},
-	{ID: "setup_email", Name: "setup_email", Description: "Configure an email account integration. Auto-detects server settings for Gmail, Outlook, Yahoo, iCloud, etc.", Source: "builtin", Parameters: []ToolParameter{{Name: "address", Type: "string", Description: "Email address", Required: true}, {Name: "password", Type: "string", Description: "Password or app-specific password", Required: true}, {Name: "imap_host", Type: "string", Description: "IMAP server hostname (auto-detected if omitted)", Required: false}, {Name: "imap_port", Type: "integer", Description: "IMAP port (default 993)", Required: false}, {Name: "smtp_host", Type: "string", Description: "SMTP server hostname (auto-detected if omitted)", Required: false}, {Name: "smtp_port", Type: "integer", Description: "SMTP port (default 587)", Required: false}}},
+	{ID: "setup_email", Name: "setup_email", Description: "Configure an email account integration. Auto-detects server settings for Gmail, Outlook, Yahoo, iCloud, etc.", Source: "builtin", Parameters: []ToolParameter{{Name: "address", Type: "string", Description: "Email address", Required: true}, {Name: "password", Type: "string", Description: "Password or app-specific password", Required: true}, {Name: "imap_host", Type: "string", Description: "IMAP server hostname (auto-detected if omitted)", Required: false}, {Name: "imap_port", Type: "integer", Description: "IMAP port (default 993)", Required: false}, {Name: "smtp_host", Type: "string", Description: "SMTP server hostname (auto-detected if omitted)", Required: false}, {Name: "smtp_port", Type: "integer", Description: "SMTP port (default 587)", Required: false}, {Name: "poll_interval_seconds", Type: "integer", Description: "How often to poll the inbox in seconds (default 900)", Required: false}}},
 	{ID: "check_email", Name: "check_email", Description: "Fetch inbox summary.", Source: "builtin", Parameters: []ToolParameter{}},
 	{ID: "read_email", Name: "read_email", Description: "Read one email by ID.", Source: "builtin", Parameters: []ToolParameter{{Name: "messageId", Type: "string", Description: "Message ID", Required: true}}},
 	{ID: "reply_email", Name: "reply_email", Description: "Reply to an email.", Source: "builtin", Parameters: []ToolParameter{{Name: "messageId", Type: "string", Description: "Message ID", Required: true}, {Name: "body", Type: "string", Description: "Reply body", Required: true}}},
@@ -131,6 +131,28 @@ var defaultTools = []ToolDefinition{
 	{ID: "remove_mcp_server", Name: "remove_mcp_server", Description: "Remove an MCP server configuration by id, name, or url.", Source: "builtin", Parameters: []ToolParameter{{Name: "id", Type: "string", Description: "MCP server id", Required: false}, {Name: "name", Type: "string", Description: "MCP server name", Required: false}, {Name: "url", Type: "string", Description: "MCP server URL", Required: false}}},
 	{ID: "transcribe_audio", Name: "transcribe_audio", Description: "Transcribe an audio or video file to text using Whisper. Provide the absolute path to a local audio/video file (mp3, mp4, m4a, wav, ogg, webm, etc). Returns the full transcript.", Source: "builtin", Parameters: []ToolParameter{{Name: "path", Type: "string", Description: "Absolute path to the audio or video file on the server filesystem", Required: true}}},
 	{ID: "ssh_execute", Name: "ssh_execute", Description: "Execute a shell command on a remote server over SSH. Returns stdout, stderr and exit code. Each command runs in a fresh shell. Set background=true for long-lived processes. Use timeout parameter for commands that may take a while (e.g. installs).", Source: "builtin", Parameters: []ToolParameter{{Name: "serverName", Type: "string", Description: "Name of the configured SSH server", Required: true}, {Name: "command", Type: "string", Description: "Shell command to execute", Required: true}, {Name: "timeout", Type: "integer", Description: "Timeout in seconds (default 300)", Required: false}, {Name: "working_dir", Type: "string", Description: "Working directory for the command", Required: false}, {Name: "background", Type: "boolean", Description: "Run in background (nohup). Returns immediately.", Required: false}}},
+	{ID: "queue_device_action", Name: "queue_device_action", Description: "Schedules an action to be executed by a remote device (e.g., the user's phone). The device will receive this instruction via heartbeat. Use this for setting alarms, calendar events, interacting with the phone, or anything else the companion device can do.", Source: "builtin", Parameters: []ToolParameter{{Name: "target_device", Type: "string", Description: "The device ID to target", Required: true}, {Name: "instruction", Type: "string", Description: "Plain text instruction of what the device should do", Required: true}}},
+	{ID: "list_devices", Name: "list_devices", Description: "List all configured companion app devices with their registered capabilities and online status. Use this to decide which device to target before calling queue_device_action.", Source: "builtin", Parameters: []ToolParameter{}},
+	{ID: "create_device", Name: "create_device", Description: "Create a new companion app device. Returns the device ID. The user can then go to the Devices tab to generate a pairing QR code.", Source: "builtin", Parameters: []ToolParameter{
+		{Name: "name", Type: "string", Description: "Short identifier for the device (e.g. 'pixel8', 'my_phone')", Required: true},
+		{Name: "label", Type: "string", Description: "Human-readable display name (e.g. 'Pixel 8 Pro', 'My Phone')", Required: true},
+	}},
+	{ID: "delete_device", Name: "delete_device", Description: "Delete a companion app device by id or name.", Source: "builtin", Parameters: []ToolParameter{
+		{Name: "id", Type: "string", Description: "Device ID", Required: false},
+		{Name: "name", Type: "string", Description: "Device name identifier", Required: false},
+	}},
+	{ID: "edit_device", Name: "edit_device", Description: "Edit a companion app device's name, label, or enabled state.", Source: "builtin", Parameters: []ToolParameter{
+		{Name: "id", Type: "string", Description: "Device ID", Required: true},
+		{Name: "name", Type: "string", Description: "New name identifier", Required: false},
+		{Name: "label", Type: "string", Description: "New display label", Required: false},
+		{Name: "enabled", Type: "boolean", Description: "Enable or disable the device", Required: false},
+	}},
+	{ID: "list_device_tasks", Name: "list_device_tasks", Description: "List pending or recent device tasks, optionally filtered by target device ID.", Source: "builtin", Parameters: []ToolParameter{
+		{Name: "target_device", Type: "string", Description: "Filter by device ID (optional)", Required: false},
+	}},
+	{ID: "get_device_capabilities", Name: "get_device_capabilities", Description: "Get the registered capabilities and online status of a specific companion device. Use this before queue_device_action to verify the device supports the intended action.", Source: "builtin", Parameters: []ToolParameter{
+		{Name: "id", Type: "string", Description: "Device ID", Required: true},
+	}},
 }
 
 const DefaultSystemPrompt = `You're not a chatbot. You're a personal assistant who grows with your user.
@@ -180,7 +202,7 @@ func DefaultUserConfig() UserConfig {
 	}
 
 	return UserConfig{
-		Integrations: IntegrationsConfig{EmailAccounts: []EmailAccountConfig{}, TelegramBots: []TelegramBotConfig{}, SSHServers: []SSHServerConfig{}},
+		Integrations: IntegrationsConfig{EmailAccounts: []EmailAccountConfig{}, TelegramBots: []TelegramBotConfig{}, SSHServers: []SSHServerConfig{}, CompanionApps: []CompanionAppConfig{}},
 		Tools: ToolsConfig{
 			Definitions: toolDefinitions,
 			Enabled:     toolEnabled,

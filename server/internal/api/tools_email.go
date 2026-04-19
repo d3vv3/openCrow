@@ -53,6 +53,10 @@ func (s *Server) toolSetupEmail(ctx context.Context, userID string, args map[str
 	if p, ok := args["smtp_port"].(float64); ok {
 		smtpPort = int(p)
 	}
+	pollInterval := 900
+	if p, ok := args["poll_interval_seconds"].(float64); ok {
+		pollInterval = int(p)
+	}
 
 	// Save to config store
 	if s.configStore != nil {
@@ -72,6 +76,7 @@ func (s *Server) toolSetupEmail(ctx context.Context, userID string, args map[str
 			SmtpPort:     smtpPort,
 			UseTLS:       true,
 			Enabled:      true,
+			PollIntervalSeconds: pollInterval,
 		}
 
 		// Idempotent upsert by email address to avoid duplicates when
@@ -108,7 +113,7 @@ func (s *Server) toolSetupEmail(ctx context.Context, userID string, args map[str
 	}
 
 	// Fallback path: save directly to DB when config store is unavailable.
-	inbox, err := s.createEmailInbox(ctx, userID, address, imapHost, imapPort, address, password, true, 60)
+	inbox, err := s.createEmailInbox(ctx, userID, address, imapHost, imapPort, address, password, true, pollInterval)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") {
 			return map[string]any{"success": false, "error": "email account already configured"}, nil

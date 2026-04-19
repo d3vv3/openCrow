@@ -121,6 +121,7 @@ function EmailAccountCard({
             <Input label="IMAP Password" type="password" value={acct.imapPassword ?? ""} onChange={(e) => updateConfig((c) => { c.integrations.emailAccounts[i].imapPassword = e.target.value; return c; })} />
             <Input label="SMTP Host" value={acct.smtpHost} onChange={(e) => updateConfig((c) => { c.integrations.emailAccounts[i].smtpHost = e.target.value; return c; })} />
             <Input label="SMTP Port" type="number" value={acct.smtpPort} onChange={(e) => updateConfig((c) => { c.integrations.emailAccounts[i].smtpPort = parseInt(e.target.value) || 0; return c; })} />
+            <Input label="Poll Interval (seconds)" type="number" value={acct.pollIntervalSeconds || 900} onChange={(e) => updateConfig((c) => { c.integrations.emailAccounts[i].pollIntervalSeconds = parseInt(e.target.value) || 900; return c; })} />
           </div>
           <div className="flex items-center gap-6">
             <Toggle label="TLS" checked={acct.tls} onChange={(v) => updateConfig((c) => { c.integrations.emailAccounts[i].tls = v; return c; })} />
@@ -173,6 +174,7 @@ export function EmailTab({
               label: "", address: "", imapHost: "", imapPort: 993,
               imapUsername: "", imapPassword: "",
               smtpHost: "", smtpPort: 587, tls: true, enabled: true,
+              pollIntervalSeconds: 900,
             });
             return c;
           })}>

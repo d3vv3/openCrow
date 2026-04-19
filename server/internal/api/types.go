@@ -295,3 +295,39 @@ type MCPServerTestResult struct {
 	Error     string           `json:"error,omitempty"`
 	Tools     []MCPToolSummary `json:"tools,omitempty"`
 }
+
+type DeviceTaskDTO struct {
+	ID           string  `json:"id"`
+	TargetDevice string  `json:"targetDevice"`
+	Instruction  string  `json:"instruction"`
+	Status       string  `json:"status"`
+	ResultOutput *string `json:"resultOutput,omitempty"`
+	CreatedAt    string  `json:"createdAt"`
+	UpdatedAt    string  `json:"updatedAt"`
+	ExpiresAt    *string `json:"expiresAt,omitempty"`
+}
+
+type CreateDeviceTaskRequest struct {
+	TargetDevice string `json:"targetDevice"`
+	Instruction  string `json:"instruction"`
+}
+
+type CompleteDeviceTaskRequest struct {
+	Success bool   `json:"success"`
+	Output  string `json:"output"`
+}
+
+type DeviceCapability struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+}
+
+type RegisterDeviceRequest struct {
+	Capabilities []DeviceCapability `json:"capabilities"`
+}
+
+type DeviceRegistrationDTO struct {
+	DeviceID     string             `json:"deviceId"`
+	Capabilities []DeviceCapability `json:"capabilities"`
+	LastSeenAt   string             `json:"lastSeenAt"`
+}

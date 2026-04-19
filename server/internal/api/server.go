@@ -178,6 +178,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.HandleFunc("POST /v1/auth/login", s.handleLogin)
 	s.mux.HandleFunc("POST /v1/auth/refresh", s.handleRefresh)
+	s.mux.Handle("POST /v1/auth/device-tokens", s.requireAccessToken(http.HandlerFunc(s.handleCreateDeviceTokens)))
 
 	s.mux.Handle("GET /v1/sessions", s.requireAccessToken(http.HandlerFunc(s.handleListSessions)))
 	s.mux.Handle("DELETE /v1/sessions/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteSession)))
@@ -239,6 +240,13 @@ func (s *Server) routes() {
 	s.mux.Handle("PUT /v1/heartbeat", s.requireAccessToken(http.HandlerFunc(s.handlePutHeartbeatConfig)))
 	s.mux.Handle("POST /v1/heartbeat/trigger", s.requireAccessToken(http.HandlerFunc(s.handleTriggerHeartbeat)))
 	s.mux.Handle("GET /v1/heartbeat/events", s.requireAccessToken(http.HandlerFunc(s.handleListHeartbeatEvents)))
+
+	s.mux.Handle("GET /v1/devices/registrations", s.requireAccessToken(http.HandlerFunc(s.handleListDeviceRegistrations)))
+	s.mux.Handle("POST /v1/devices/{id}/register", s.requireAccessToken(http.HandlerFunc(s.handleRegisterDevice)))
+	s.mux.Handle("GET /v1/devices/tasks", s.requireAccessToken(http.HandlerFunc(s.handleListDeviceTasks)))
+	s.mux.Handle("POST /v1/devices/tasks", s.requireAccessToken(http.HandlerFunc(s.handleCreateDeviceTask)))
+	s.mux.Handle("DELETE /v1/devices/tasks/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteDeviceTask)))
+	s.mux.Handle("POST /v1/devices/tasks/{id}/complete", s.requireAccessToken(http.HandlerFunc(s.handleCompleteDeviceTask)))
 
 	s.mux.Handle("GET /v1/email/inboxes", s.requireAccessToken(http.HandlerFunc(s.handleListEmailInboxes)))
 	s.mux.Handle("POST /v1/email/inboxes", s.requireAccessToken(http.HandlerFunc(s.handleCreateEmailInbox)))

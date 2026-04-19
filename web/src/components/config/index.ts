@@ -8,4 +8,5 @@ export { EmailTab } from "./EmailTab";
 export { SchedulesTab } from "./SchedulesTab";
 export { ServersTab } from "./ServersTab";
 export { TelegramTab } from "./TelegramTab";
+export { DevicesTab } from "./DevicesTab";
 export * from "./types";

@@ -76,7 +76,7 @@ LIMIT 1;
 func (s *Server) syncEmailInboxesFromConfig(ctx context.Context, userID string, accounts []configstore.EmailAccountConfig) error {
 	const q = `
 INSERT INTO email_inboxes (user_id, address, label, imap_host, imap_port, imap_username, imap_password, smtp_host, smtp_port, use_tls, active, poll_interval_seconds, updated_at)
-VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 60, NOW())
+VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
 ON CONFLICT (user_id, address) DO UPDATE SET
     label         = EXCLUDED.label,
     imap_host     = EXCLUDED.imap_host,
@@ -87,6 +87,7 @@ ON CONFLICT (user_id, address) DO UPDATE SET
     smtp_port     = EXCLUDED.smtp_port,
     use_tls       = EXCLUDED.use_tls,
     active        = EXCLUDED.active,
+    poll_interval_seconds = EXCLUDED.poll_interval_seconds,
     updated_at    = NOW();
 `
 	for _, acc := range accounts {
@@ -98,10 +99,14 @@ ON CONFLICT (user_id, address) DO UPDATE SET
 		if smtpPort <= 0 {
 			smtpPort = 587
 		}
+		pollInterval := acc.PollIntervalSeconds
+		if pollInterval <= 0 {
+			pollInterval = 900 // 15 minutes default
+		}
 		if _, err := s.db.Exec(ctx, q,
 			userID, acc.Address, acc.Label, acc.ImapHost, imapPort,
 			acc.ImapUsername, acc.ImapPassword,
-			acc.SmtpHost, smtpPort, acc.UseTLS, acc.Enabled,
+			acc.SmtpHost, smtpPort, acc.UseTLS, acc.Enabled, pollInterval,
 		); err != nil {
 			return fmt.Errorf("upsert inbox %s: %w", acc.Address, err)
 		}

@@ -35,10 +35,18 @@ type SkillEntry struct {
 }
 
 type IntegrationsConfig struct {
-	EmailAccounts            []EmailAccountConfig `json:"emailAccounts"`
-	TelegramBots             []TelegramBotConfig  `json:"telegramBots"`
-	SSHServers               []SSHServerConfig    `json:"sshServers"`
-	DefaultNotificationBotID string               `json:"defaultNotificationBotId,omitempty"`
+	EmailAccounts            []EmailAccountConfig  `json:"emailAccounts"`
+	TelegramBots             []TelegramBotConfig   `json:"telegramBots"`
+	SSHServers               []SSHServerConfig     `json:"sshServers"`
+	CompanionApps            []CompanionAppConfig  `json:"companionApps"`
+	DefaultNotificationBotID string                `json:"defaultNotificationBotId,omitempty"`
+}
+
+type CompanionAppConfig struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Label   string `json:"label"`
+	Enabled bool   `json:"enabled"`
 }
 
 type SSHServerConfig struct {
@@ -87,8 +95,9 @@ type EmailAccountConfig struct {
 	ImapPassword string `json:"imapPassword"`
 	SmtpHost     string `json:"smtpHost"`
 	SmtpPort     int    `json:"smtpPort"`
-	UseTLS       bool   `json:"useTls"`
-	Enabled      bool   `json:"enabled"`
+	UseTLS              bool   `json:"useTls"`
+	Enabled             bool   `json:"enabled"`
+	PollIntervalSeconds int    `json:"pollIntervalSeconds"`
 }
 
 type ToolsConfig struct {
