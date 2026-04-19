@@ -1,16 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { endpoints, type UserConfig, getAccessToken } from "@/lib/api";
+import { endpoints, type UserConfig, getAccessToken, getApiBase } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://localhost:8080";
-
 function getWsBase(): string {
-  return API_BASE.replace(/^http/, "ws");
+  return getApiBase().replace(/^http/, "ws");
 }
 
 export default function TerminalView() {

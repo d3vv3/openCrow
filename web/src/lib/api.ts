@@ -87,11 +87,7 @@ export function getApiBase(): string {
       ?.getAttribute("content");
     if (content) return content;
   }
-  return (
-    process.env.NEXT_PUBLIC_API_URL ||
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    "http://localhost:8080"
-  );
+  return "http://localhost:8080";
 }
 
 function getCookie(name: string): string | null {
