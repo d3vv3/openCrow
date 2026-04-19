@@ -8,6 +8,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	httpSwagger "github.com/swaggo/http-swagger/v2"
+
+	_ "github.com/opencrow/opencrow/server/docs"
 	"github.com/opencrow/opencrow/server/internal/auth"
 	"github.com/opencrow/opencrow/server/internal/configstore"
 	"github.com/opencrow/opencrow/server/internal/orchestrator"
@@ -171,11 +174,34 @@ func NewServer(env string, db *pgxpool.Pool, authMgr *auth.Manager, cfgStore *co
 }
 
 func (s *Server) Handler() http.Handler {
-	return s.mux
+	return corsMiddleware(s.mux)
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
+
+	// Swagger UI
+	s.mux.HandleFunc("GET /docs/", httpSwagger.Handler(
+		httpSwagger.URL("/docs/doc.json"),
+	))
+	// Alias for openapi.json
+	s.mux.HandleFunc("GET /openapi.json", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/doc.json", http.StatusMovedPermanently)
+	})
+
 	s.mux.HandleFunc("POST /v1/auth/login", s.handleLogin)
 	s.mux.HandleFunc("POST /v1/auth/refresh", s.handleRefresh)
 	s.mux.Handle("POST /v1/auth/device-tokens", s.requireAccessToken(http.HandlerFunc(s.handleCreateDeviceTokens)))

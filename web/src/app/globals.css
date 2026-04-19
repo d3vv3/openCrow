@@ -105,6 +105,17 @@ body {
   border-radius: 3px;
 }
 
+/* Hide scrollbar utility */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* ─── Focus ring ─── */
 *:focus-visible {
   outline: 2px solid var(--color-cyan);

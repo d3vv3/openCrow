@@ -1,11 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # ── Build stage ───────────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build-base
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS build-base
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+RUN go run github.com/swaggo/swag/cmd/swag@latest init -d .,internal -g cmd/api/main.go
 
 FROM build-base AS build-dev
 RUN CGO_ENABLED=0 go build -mod=mod -o /out/server ./cmd/api
@@ -29,7 +30,7 @@ VOLUME ["/data", "/sandbox"]
 EXPOSE 8080
 
 # ── Dev runtime: hot-reload with CompileDaemon ───────────────────────────────
-FROM golang:1.23-alpine AS runtime-dev
+FROM golang:1.25-alpine AS runtime-dev
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata bash wget
 COPY entrypoint.sh /entrypoint.sh

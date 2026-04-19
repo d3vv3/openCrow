@@ -9,3 +9,9 @@ repos:
         types_or: [ts, tsx, javascript, jsx, json, css]
         pass_filenames: true
         additional_dependencies: []
+      - id: generate-swagger
+        name: Generate Swagger (server)
+        language: system
+        entry: bash -c 'cd server && PATH=$PATH:/usr/local/go/bin go run github.com/swaggo/swag/cmd/swag@latest init -d .,internal -g cmd/api/main.go && git add docs'
+        files: ^server/.*\.go$
+        pass_filenames: false

@@ -209,22 +209,33 @@ export default function ChatShell({
               <div className="chat-composer rounded-xl border border-violet bg-surface-lowest/80 backdrop-blur-2xl shadow-[var(--shadow-float)] ring-1 ring-violet/20 focus-within:ring-violet/40 transition-all p-3">
                 {/* Provider/model selector row */}
                 {providers.length > 0 && (
-                  <div className="mb-2 flex items-center gap-2">
+                  <div className="mb-2 flex items-center gap-2 overflow-hidden">
                     <span className="text-xs text-on-surface-variant shrink-0">Model:</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {providers.map((p) => (
-                        <button
-                          key={p.name}
-                          onClick={() => setSelectedProvider(p.name)}
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-mono transition-all duration-100 border cursor-pointer ${
-                            selectedProvider === p.name
-                              ? "border-violet/60 bg-violet/20 text-violet-light"
-                              : "border-violet/20 bg-violet/10 text-on-surface-variant hover:border-violet/40 hover:bg-violet/20 hover:text-violet-light"
-                          }`}
-                        >
-                          {p.model || p.name}
-                        </button>
-                      ))}
+                    <div className="flex-1 min-w-0 overflow-hidden relative">
+                      <div
+                        className="flex flex-nowrap gap-1.5 overflow-x-auto pb-6 -mb-6 hide-scrollbar"
+                        style={{
+                          maskImage:
+                            "linear-gradient(to left, transparent 0%, black 60px, black 100%)",
+                          WebkitMaskImage:
+                            "linear-gradient(to left, transparent 0%, black 60px, black 100%)",
+                          paddingRight: "60px",
+                        }}
+                      >
+                        {providers.map((p) => (
+                          <button
+                            key={p.name}
+                            onClick={() => setSelectedProvider(p.name)}
+                            className={`shrink-0 whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-mono transition-all duration-100 border cursor-pointer ${
+                              selectedProvider === p.name
+                                ? "border-violet/60 bg-violet/20 text-violet-light"
+                                : "border-violet/20 bg-violet/10 text-on-surface-variant hover:border-violet/40 hover:bg-violet/20 hover:text-violet-light"
+                            }`}
+                          >
+                            {p.model || p.name}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -358,9 +369,47 @@ export default function ChatShell({
                     style={{ height: "36px", maxHeight: "72px", outline: "none" }}
                   />
 
-                  <Button onClick={handleSend} loading={sending} disabled={!composing.trim()}>
-                    Send
-                  </Button>
+                  <button
+                    onClick={handleSend}
+                    disabled={!composing.trim() || sending}
+                    className="mb-0.5 shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md border border-violet/40 bg-violet/10 text-violet hover:bg-violet/20 hover:border-violet hover:text-violet-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    aria-label="Send message"
+                    title="Send message"
+                  >
+                    {sending ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        className="animate-spin"
+                      >
+                        <circle
+                          cx="8"
+                          cy="8"
+                          r="6"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeDasharray="20 14"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ marginLeft: "-1px", marginTop: "1px" }}
+                      >
+                        <path d="M10 14l11 -11" />
+                        <path d="M21 3l-6.5 18a0.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a0.55 .55 0 0 1 0 -1l18 -6.5" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
                 {lastUsage && (
                   <div className="flex justify-end px-1 pt-0.5">

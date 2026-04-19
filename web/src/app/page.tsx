@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { endpoints, setTokens, isAuthenticated, setAuthFailureHandler } from "@/lib/api";
+import Image from "next/image";
+import {
+  endpoints,
+  setTokens,
+  isAuthenticated,
+  setAuthFailureHandler,
+  initApiBase,
+} from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -11,9 +18,7 @@ import { HeartbeatDot } from "@/components/ui/HeartbeatDot";
 import AuthenticatedApp from "@/components/AuthenticatedApp";
 
 interface HealthState {
-  status: string;
   name: string;
-  environment: string;
 }
 
 export default function HomePage() {
@@ -27,11 +32,13 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Check auth on mount
+  // Init API base URL from server config, then check auth
   useEffect(() => {
-    setAuthed(isAuthenticated());
-    setDevice(navigator.userAgent.slice(0, 64) || "Web Browser");
-    setAuthFailureHandler(() => setAuthed(false));
+    initApiBase().then(() => {
+      setAuthed(isAuthenticated());
+      setDevice(navigator.userAgent.slice(0, 64) || "Web Browser");
+      setAuthFailureHandler(() => setAuthed(false));
+    });
   }, []);
 
   // Fetch health
@@ -68,18 +75,39 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-dvh flex items-center justify-center bg-surface-lowest overflow-hidden">
+      {/* Dot mesh */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, color-mix(in srgb, var(--color-violet) 45%, transparent) 1.5px, transparent 1.5px)",
+          backgroundSize: "28px 28px",
+          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%)",
+        }}
+      />
+
       {/* Radial bg glow */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 60% 50% at 50% 45%, var(--color-surface-mid) 0%, var(--color-surface-lowest) 100%)",
+            "radial-gradient(ellipse 60% 50% at 50% 45%, color-mix(in srgb, var(--color-surface-mid) 80%, transparent) 0%, transparent 100%)",
         }}
       />
 
       <div className="relative z-10 w-full max-w-sm px-6">
         {/* Logo */}
-        <div className="animate-fade-in stagger-1 text-center mb-2">
+        <div className="animate-fade-in stagger-1 flex flex-col items-center justify-center mb-2">
+          <Image
+            src="/crow.svg"
+            alt="openCrow Logo"
+            width={72}
+            height={72}
+            className="mb-4 opacity-90 crow-icon"
+            priority
+          />
           <h1 className="font-display text-3xl font-bold">
             <span className="text-on-surface-variant">open</span>
             <span className="text-violet-light">Crow</span>
@@ -99,14 +127,9 @@ export default function HomePage() {
           {healthLoading ? (
             <Spinner size="sm" />
           ) : health ? (
-            <>
-              <Badge variant="success" dot>
-                {health.status}
-              </Badge>
-              <span className="text-xs text-on-surface-variant font-mono">
-                {health.name} &middot; {health.environment}
-              </span>
-            </>
+            <Badge variant="success" dot>
+              {health.name} reachable
+            </Badge>
           ) : (
             <Badge variant="error" dot>
               unreachable

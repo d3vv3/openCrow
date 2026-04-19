@@ -77,14 +77,20 @@ import type {
   DeviceRegistration,
 } from "./api-types";
 
-// Read the API base URL injected by the server-side layout at runtime.
-// Falls back to baked-in env vars only when the meta tag is unavailable (e.g. SSR).
-export function getApiBase(): string {
-  if (typeof document !== "undefined") {
-    const content = document.head.querySelector('meta[name="x-api-base"]')?.getAttribute("content");
-    if (content) return content;
+let _apiBase = "http://localhost:8080";
+
+export async function initApiBase(): Promise<void> {
+  try {
+    const res = await fetch("/api/config");
+    const data = await res.json();
+    if (data.apiBaseUrl) _apiBase = data.apiBaseUrl;
+  } catch {
+    // keep default
   }
-  return "http://localhost:8080";
+}
+
+export function getApiBase(): string {
+  return _apiBase;
 }
 
 function getCookie(name: string): string | null {
