@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import QRCode from "react-qr-code";
 import type { UserConfig, CompanionAppConfig, DeviceTaskDTO, DeviceRegistration } from "@/lib/api";
-import { endpoints } from "@/lib/api";
+import { endpoints, getExternalApiBase } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { Toggle } from "@/components/ui/Toggle";
 import { Button } from "@/components/ui/Button";
@@ -13,8 +13,8 @@ import type { UpdateConfigFn } from "./types";
 
 function QRModal({ payload, onClose }: { payload: string; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-surface-high border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" style={{ colorScheme: "light" }}>
+      <div className="bg-surface-high border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-6" style={{ "--color-surface":"#f8f9fa","--color-surface-high":"#e7e8e9","--color-on-surface":"#191c1d","--color-on-surface-variant":"#434656","--color-outline-ghost":"rgba(130,135,160,0.35)" } as React.CSSProperties}>
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium text-on-surface">Pair Companion App</h3>
           <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface p-1">
@@ -24,9 +24,7 @@ function QRModal({ payload, onClose }: { payload: string; onClose: () => void })
           </button>
         </div>
         <div className="flex flex-col items-center gap-6">
-          <div className="bg-white p-4 rounded-xl">
-            <QRCode value={payload} size={200} />
-          </div>
+          <QRCode value={payload} size={200} bgColor="#ffffff" />
           <p className="text-sm text-center text-on-surface-variant">
             Scan this QR code from the Companion App to securely pair it to your openCrow server.
           </p>
@@ -61,7 +59,7 @@ function CompanionAppCard({
       const res = await endpoints.createDeviceTokens(app.label || app.name);
       const payload = JSON.stringify({
         id: app.id,
-        server: window.location.origin,
+        server: getExternalApiBase(),
         accessToken: res.tokens.accessToken,
         refreshToken: res.tokens.refreshToken,
       });
@@ -218,6 +216,8 @@ export function DevicesTab({
     setQrPayload(null);
   };
 
+  const [pendingDevice, setPendingDevice] = useState<{ id: string; name: string; label: string } | null>(null);
+
   const generateDeviceTokens = async () => {
     const name = newDeviceName.trim();
     const label = newDeviceLabel.trim() || name;
@@ -228,17 +228,12 @@ export function DevicesTab({
       const deviceId = "dev_" + Math.random().toString(36).substring(2, 9);
       const payload = JSON.stringify({
         id: deviceId,
-        server: window.location.origin,
+        server: getExternalApiBase(),
         accessToken: res.tokens.accessToken,
         refreshToken: res.tokens.refreshToken,
       });
       setQrPayload(payload);
-      updateConfig((c) => {
-        if (!c.integrations.companionApps) c.integrations.companionApps = [];
-        c.integrations.companionApps.push({ id: deviceId, name, label, enabled: true });
-        return c;
-      });
-      saveFullConfig();
+      setPendingDevice({ id: deviceId, name, label });
     } catch (e) {
       console.error(e);
     } finally {
@@ -246,7 +241,22 @@ export function DevicesTab({
     }
   };
 
+  const confirmAddDevice = () => {
+    if (pendingDevice) {
+      updateConfig((c) => {
+        if (!c.integrations.companionApps) c.integrations.companionApps = [];
+        c.integrations.companionApps.push({ id: pendingDevice.id, name: pendingDevice.name, label: pendingDevice.label, enabled: true });
+        return c;
+      });
+      saveFullConfig();
+    }
+    setPendingDevice(null);
+    setIsAddingDevice(false);
+    setQrPayload(null);
+  };
+
   const closeAddDevice = () => {
+    setPendingDevice(null);
     setIsAddingDevice(false);
     setQrPayload(null);
   };
@@ -376,8 +386,8 @@ export function DevicesTab({
       </div>
 
       {isAddingDevice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-surface-high border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" style={{ colorScheme: "light" }}>
+          <div className="bg-surface-high border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-6" style={{ "--color-surface":"#f8f9fa","--color-surface-high":"#e7e8e9","--color-on-surface":"#191c1d","--color-on-surface-variant":"#434656","--color-outline-ghost":"rgba(130,135,160,0.35)" } as React.CSSProperties}>
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium text-on-surface">Pair Companion App</h3>
               <button onClick={closeAddDevice} className="text-on-surface-variant hover:text-on-surface p-1">
@@ -418,12 +428,12 @@ export function DevicesTab({
             ) : (
               <div className="flex flex-col items-center gap-6">
                 <div className="bg-white p-4 rounded-xl">
-                  <QRCode value={qrPayload} size={200} />
+                  <QRCode value={qrPayload} size={200} bgColor="#ffffff" />
                 </div>
-                <p className="text-sm text-center text-on-surface-variant">
+                <p className="text-sm text-center text-gray-500">
                   Scan this QR code from the Companion App to securely pair it to your openCrow server.
                 </p>
-                <Button variant="secondary" className="w-full" onClick={closeAddDevice}>
+                <Button variant="secondary" className="w-full" onClick={confirmAddDevice}>
                   Done
                 </Button>
               </div>

@@ -83,6 +83,27 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "http://localhost:8080";
 
+/**
+ * Returns the API base URL that external devices (e.g. companion app) can reach.
+ * If API_BASE points to localhost, we replace the hostname with the browser's
+ * current hostname so LAN devices can connect.
+ */
+export function getExternalApiBase(): string {
+  if (typeof window === "undefined") return API_BASE;
+  try {
+    const apiUrl = new URL(API_BASE);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (appUrl) {
+      apiUrl.hostname = new URL(appUrl).hostname;
+    } else if (apiUrl.hostname === "localhost" || apiUrl.hostname === "127.0.0.1") {
+      apiUrl.hostname = window.location.hostname;
+    }
+    return apiUrl.origin;
+  } catch {
+    return API_BASE;
+  }
+}
+
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
