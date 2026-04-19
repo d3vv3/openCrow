@@ -295,7 +295,7 @@ func validateToolCalls(toolCalls []ToolCall, tools []ToolSpec, trace *Completion
 			invalid.Status = "error"
 			invalid.Output = fmt.Sprintf("model requested unknown tool %s", tc.Name)
 			trace.ToolCalls = append(trace.ToolCalls, invalid)
-			return fmt.Errorf(invalid.Output)
+			return errors.New(invalid.Output)
 		}
 		missing := missingRequiredArgs(tc.Arguments, required)
 		if len(missing) == 0 {
@@ -309,7 +309,7 @@ func validateToolCalls(toolCalls []ToolCall, tools []ToolSpec, trace *Completion
 		invalid.Status = "error"
 		invalid.Output = fmt.Sprintf("model requested tool %s without required args: %s (args=%s)", tc.Name, strings.Join(missing, ", "), string(argsJSON))
 		trace.ToolCalls = append(trace.ToolCalls, invalid)
-		return fmt.Errorf(invalid.Output)
+		return errors.New(invalid.Output)
 	}
 	return nil
 }

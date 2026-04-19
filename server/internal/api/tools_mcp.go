@@ -370,7 +370,7 @@ func callMCPToolOnServer(ctx context.Context, serverURL string, headers map[stri
 		if len(parts) == 0 {
 			return nil, fmt.Errorf("tools/call returned isError=true")
 		}
-		return nil, fmt.Errorf(strings.Join(parts, "\n"))
+		return nil, fmt.Errorf("%s", strings.Join(parts, "\n"))
 	}
 	var parsed any
 	if err := json.Unmarshal(envelope.Result, &parsed); err != nil {

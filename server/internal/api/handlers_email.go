@@ -249,7 +249,7 @@ func (s *Server) handleTestEmailConnection(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	addr := fmt.Sprintf("%s:%d", host, port)
+	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	timeout := 8 * time.Second
 
 	var conn net.Conn

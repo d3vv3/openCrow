@@ -128,7 +128,7 @@ export default function HomePage() {
         </div>
 
         <div className="animate-fade-in stagger-2 mb-6 flex justify-center">
-          <Badge variant="default">{openCrowVersion}</Badge>
+          <Badge variant="neutral">{openCrowVersion}</Badge>
         </div>
 
         {/* Health status */}

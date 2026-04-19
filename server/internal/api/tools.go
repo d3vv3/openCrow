@@ -56,7 +56,7 @@ func toolResultError(result any) error {
 		return nil
 	}
 	if errText := strings.TrimSpace(fmt.Sprint(m["error"])); errText != "" && errText != "<nil>" {
-		return fmt.Errorf(errText)
+		return fmt.Errorf("%s", errText)
 	}
 	return fmt.Errorf("tool reported success=false")
 }
