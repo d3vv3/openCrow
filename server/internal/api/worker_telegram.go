@@ -302,9 +302,6 @@ func (s *Server) pollTelegramBot(ctx context.Context, userID string, bot configs
 			if _, dbErr := s.createMessage(ctx, userID, convID, "user", rawPrompt, nil); dbErr != nil {
 				s.wlog("telegram-worker", "[telegram-worker] failed to persist user message: %v", dbErr)
 			}
-			if _, dbErr := s.createMessage(ctx, userID, convID, "assistant", reply, nil); dbErr != nil {
-				s.wlog("telegram-worker", "[telegram-worker] failed to persist assistant message: %v", dbErr)
-			}
 			for _, tc := range orchResult.Trace.ToolCalls {
 				outputStr := tc.Output
 				errStr := ""
@@ -315,6 +312,9 @@ func (s *Server) pollTelegramBot(ctx context.Context, userID string, bot configs
 				if saveErr := s.saveToolCall(ctx, userID, convID, tc.Name, tc.Arguments, outputStr, errStr, 0); saveErr != nil {
 					s.wlog("telegram-worker", "[telegram-worker] failed to persist tool call %s: %v", tc.Name, saveErr)
 				}
+			}
+			if _, dbErr := s.createMessage(ctx, userID, convID, "assistant", reply, nil); dbErr != nil {
+				s.wlog("telegram-worker", "[telegram-worker] failed to persist assistant message: %v", dbErr)
 			}
 		}
 	}

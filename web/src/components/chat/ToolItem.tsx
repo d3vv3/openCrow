@@ -48,36 +48,38 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
     <div className="flex justify-center animate-in fade-in duration-300">
       <button
         onClick={toggleExpand}
-        className="w-full max-w-[90%] text-left rounded-lg border border-[#2a2a3e] bg-[#0d0d1a] hover:border-[#3a3a5e] transition-colors font-mono text-xs overflow-hidden"
+        className="w-full max-w-full sm:max-w-[72%] cursor-pointer text-left rounded-lg border border-white/8 bg-surface-lowest hover:border-white/15 transition-colors font-mono text-xs overflow-hidden"
       >
         <div className="flex items-center gap-2 px-3 py-1.5">
-          <ToolIcon className="text-[#6272a4] shrink-0 w-3.5 h-3.5" />
+          <ToolIcon className="text-on-surface-variant shrink-0 w-3.5 h-3.5" />
           <span
             className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-semibold ${toolKind === "MCP" ? "text-violet border-violet/40 bg-violet/10" : "text-cyan border-cyan/40 bg-cyan/10"}`}
           >
             [{toolKind}]
           </span>
-          <span className="text-[#8be9fd] shrink-0">{tc.toolName}</span>
+          <span className="text-cyan shrink-0">{tc.toolName}</span>
           {primaryVal && (
-            <span className="text-[#f8f8f2]/60 truncate flex-1">{primaryVal.slice(0, 80)}</span>
+            <span className="text-on-surface/60 truncate flex-1">{primaryVal.slice(0, 80)}</span>
           )}
           {!isLive &&
             (tc.error ? (
-              <span className="shrink-0 ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-[#ff5555]/15 text-[#ff5555] border border-[#ff5555]/30">
+              <span className="shrink-0 ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-error/15 text-error border border-error/30">
                 failed
               </span>
             ) : (
-              <span className="shrink-0 ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-[#50fa7b]/15 text-[#50fa7b] border border-[#50fa7b]/30">
+              <span className="shrink-0 ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-success/15 text-success border border-success/30">
                 ok
               </span>
             ))}
-          <span className="text-[#6272a4] shrink-0">{formatTime(tc.createdAt)}</span>
-          {isLive && <span className="text-[#6272a4] animate-pulse shrink-0 ml-auto">...</span>}
-          <span className="text-[#6272a4] shrink-0 ml-1">{isExpanded ? "▲" : "▼"}</span>
+          <span className="text-on-surface-variant shrink-0">{formatTime(tc.createdAt)}</span>
+          {isLive && (
+            <span className="text-on-surface-variant animate-pulse shrink-0 ml-auto">...</span>
+          )}
+          <span className="text-on-surface-variant shrink-0 ml-1">{isExpanded ? "▲" : "▼"}</span>
         </div>
 
         {isExpanded && (
-          <div className="border-t border-[#2a2a3e] px-3 py-2 space-y-2">
+          <div className="border-t border-white/8 px-3 py-2 space-y-2">
             {Object.keys(args).length > 0 && (
               <div className="space-y-1">
                 {Object.entries(args).map(([k, v]) => {
@@ -99,14 +101,14 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
                   const multiline = displayVal.includes("\n");
                   return (
                     <div key={k}>
-                      <span className="text-[#f1fa8c]">{k}</span>
-                      <span className="text-[#6272a4]">=</span>
+                      <span className="text-warning">{k}</span>
+                      <span className="text-on-surface-variant">=</span>
                       {multiline ? (
-                        <pre className="text-[#50fa7b] whitespace-pre-wrap break-all mt-0.5 pl-2 border-l border-[#6272a4]/30">
+                        <pre className="text-success whitespace-pre-wrap break-all mt-0.5 pl-2 border-l border-on-surface-variant/30">
                           {displayVal}
                         </pre>
                       ) : (
-                        <span className="text-[#50fa7b] break-all ml-1">{displayVal}</span>
+                        <span className="text-success break-all ml-1">{displayVal}</span>
                       )}
                     </div>
                   );
@@ -115,14 +117,12 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
             )}
             {stdout && (
               <pre
-                className={`whitespace-pre-wrap break-all leading-relaxed ${stdoutIsJson ? "text-[#f8f8f2]/80 bg-black/20 rounded p-2" : "text-[#50fa7b] opacity-80"}`}
+                className={`whitespace-pre-wrap break-all leading-relaxed ${stdoutIsJson ? "text-on-surface/80 bg-black/20 rounded p-2" : "text-success opacity-80"}`}
               >
                 {stdout}
               </pre>
             )}
-            {tc.error && (
-              <pre className="text-[#ff5555] whitespace-pre-wrap break-all">{tc.error}</pre>
-            )}
+            {tc.error && <pre className="text-error whitespace-pre-wrap break-all">{tc.error}</pre>}
           </div>
         )}
       </button>

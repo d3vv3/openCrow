@@ -147,9 +147,6 @@ func (s *Server) executeScheduledTask(ctx context.Context, taskID, userID, descr
 		if _, msgErr := s.createMessage(taskCtx, userID, conv.ID, "user", prompt, nil); msgErr != nil {
 			s.wlog("task-worker", "[task-worker] failed to insert user message for task %s: %v", taskID, msgErr)
 		}
-		if _, msgErr := s.createMessage(taskCtx, userID, conv.ID, "assistant", resultContent, nil); msgErr != nil {
-			s.wlog("task-worker", "[task-worker] failed to insert assistant message for task %s: %v", taskID, msgErr)
-		}
 		for _, tc := range result.Trace.ToolCalls {
 			outputStr := tc.Output
 			errStr := ""
@@ -160,6 +157,9 @@ func (s *Server) executeScheduledTask(ctx context.Context, taskID, userID, descr
 			if saveErr := s.saveToolCall(taskCtx, userID, conv.ID, tc.Name, tc.Arguments, outputStr, errStr, 0); saveErr != nil {
 				s.wlog("task-worker", "[task-worker] failed to persist tool call %s for task %s conversation %s: %v", tc.Name, taskID, conv.ID, saveErr)
 			}
+		}
+		if _, msgErr := s.createMessage(taskCtx, userID, conv.ID, "assistant", resultContent, nil); msgErr != nil {
+			s.wlog("task-worker", "[task-worker] failed to insert assistant message for task %s: %v", taskID, msgErr)
 		}
 	} else {
 		s.wlog("task-worker", "[task-worker] failed to create conversation for task %s: %v", taskID, convErr)

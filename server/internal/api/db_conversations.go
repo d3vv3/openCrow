@@ -149,7 +149,7 @@ ORDER BY m.created_at ASC;
 		if err := rows.Scan(&item.ID, &item.ConversationID, &item.Role, &item.Content, &createdAt); err != nil {
 			return nil, err
 		}
-		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339Nano)
 		result = append(result, item)
 		messageOrder = append(messageOrder, item.ID)
 	}
@@ -280,7 +280,7 @@ RETURNING id::text, file_name, mime_type, size_bytes, data_url, created_at;
 func (s *Server) updateMessageContent(ctx context.Context, userID, conversationID, messageID, content string) error {
 	const updateMessageQ = `
 	UPDATE messages
-	SET content = $4
+	SET content = $4, created_at = NOW()
 	WHERE id = $1::uuid
 	  AND conversation_id = $2::uuid
 	  AND conversation_id IN (SELECT id FROM conversations WHERE id = $2::uuid AND user_id = $3::uuid);
@@ -360,7 +360,7 @@ ORDER BY tc.created_at ASC;
 		} else {
 			item.Kind = "MCP"
 		}
-		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339Nano)
 		result = append(result, item)
 	}
 	return result, rows.Err()

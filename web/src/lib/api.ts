@@ -587,7 +587,8 @@ export const endpoints = {
             fullOutput += data.token;
             onToken(data.token);
           } else if (eventType === "done") {
-            fullOutput = data.output ?? fullOutput;
+            // Prefer accumulated tokens; fall back to server value only if we received nothing
+            if (!fullOutput && data.output) fullOutput = data.output;
             if (data.usage && onUsage) {
               onUsage({
                 promptTokens: data.usage.promptTokens ?? 0,

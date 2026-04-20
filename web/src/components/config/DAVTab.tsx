@@ -120,7 +120,19 @@ export function DAVTab({
     <div className="space-y-6">
       <SectionHeader
         title="WebDAV / CalDAV / CardDAV"
-        description="Configure DAV credentials, protocol toggles, and test live connectivity."
+        description={
+          <span>
+            Configure DAV credentials, protocol toggles, and test live connectivity.{" "}
+            <a
+              href="https://www.davx5.com/tested-with"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-cyan hover:underline"
+            >
+              Tested providers →
+            </a>
+          </span>
+        }
         action={
           <Button
             variant="secondary"

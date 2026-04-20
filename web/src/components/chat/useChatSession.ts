@@ -116,8 +116,16 @@ export function useChatSession({
   }, []);
 
   // ─── Auto-scroll ───
+  // Instant when switching conversations, smooth for new messages arriving
+  const instantScrollRef = useRef(false);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    instantScrollRef.current = true;
+  }, [activeConversationId]);
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const behavior = instantScrollRef.current ? "instant" : "smooth";
+    instantScrollRef.current = false;
+    messagesEndRef.current?.scrollIntoView({ behavior: behavior as ScrollBehavior });
   }, [messages]);
 
   // ─── Copy message content ───
@@ -293,9 +301,12 @@ export function useChatSession({
         },
       );
       setStreamingMsgId(null);
-      if (finalOutput && finalOutput !== fullOutput) {
+      // Use whichever is longer: accumulated tokens or server's confirmed output
+      const resolvedOutput =
+        finalOutput && finalOutput.length > fullOutput.length ? finalOutput : fullOutput;
+      if (resolvedOutput && resolvedOutput !== fullOutput) {
         setMessages((prev) =>
-          prev.map((m) => (m.id === streamId ? { ...m, content: finalOutput } : m)),
+          prev.map((m) => (m.id === streamId ? { ...m, content: resolvedOutput } : m)),
         );
       }
       // Refresh persisted messages + tool calls from server (replaces optimistic stream IDs)

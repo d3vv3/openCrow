@@ -172,32 +172,32 @@ export default function TerminalView() {
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-64px)]">
       {/* Terminal window */}
-      <div className="flex-1 flex flex-col rounded-lg overflow-hidden border border-[#2a2a3e] min-h-0">
+      <div className="flex-1 flex flex-col rounded-lg overflow-hidden border border-white/8 min-h-0">
         {/* Title bar */}
-        <div className="shrink-0 flex items-center gap-3 bg-[#1a1a2e] px-4 py-2">
+        <div className="shrink-0 flex items-center gap-3 bg-surface-lowest px-4 py-2">
           <div className="flex gap-1.5">
             <span className="block h-3 w-3 rounded-full bg-[#ff5f57]" />
             <span className="block h-3 w-3 rounded-full bg-[#ffbd2e]" />
             <span className="block h-3 w-3 rounded-full bg-[#28c840]" />
           </div>
-          <span className="text-xs font-mono text-[#8888aa]">
+          <span className="text-xs font-mono text-on-surface-variant">
             openCrow@sandbox &mdash; /bin/bash
           </span>
           <div className="ml-auto flex items-center gap-3">
             {connected ? (
-              <span className="flex items-center gap-1.5 text-xs font-mono text-[#50fa7b]">
+              <span className="flex items-center gap-1.5 text-xs font-mono text-success">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#50fa7b] opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#50fa7b]" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
                 </span>
                 connected
               </span>
             ) : (
-              <span className="text-xs font-mono text-[#ff5555]">disconnected</span>
+              <span className="text-xs font-mono text-error">disconnected</span>
             )}
             <button
               onClick={connectTerminal}
-              className="text-xs font-mono text-[#8888aa] hover:text-[#f8f8f2] transition-colors px-2 py-0.5 rounded border border-[#2a2a3e] hover:border-[#6272a4]"
+              className="text-xs font-mono text-on-surface-variant hover:text-on-surface transition-colors px-2 py-0.5 rounded border border-white/8 hover:border-white/20"
             >
               reconnect
             </button>
@@ -207,7 +207,7 @@ export default function TerminalView() {
         {/* xterm container */}
         <div className="flex-1 bg-[#0d0d1a] min-h-0 overflow-hidden p-1">
           {error && (
-            <div className="text-[#ff5555] font-mono text-xs px-3 py-2 border-b border-[#2a2a3e]">
+            <div className="text-error font-mono text-xs px-3 py-2 border-b border-white/8">
               {error}
             </div>
           )}

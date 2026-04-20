@@ -109,12 +109,7 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Save the assistant response
-	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", result.Output, nil); err != nil {
-		log.Printf("warn: unable to save assistant message: %v", err)
-	}
-
-	// Persist tool calls
+	// Persist tool calls before the assistant message so their timestamps sort earlier
 	for _, call := range result.Trace.ToolCalls {
 		var errStr string
 		if call.Status == "error" {
@@ -127,6 +122,11 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 		if err := s.saveToolCall(ctx, userID, req.ConversationID, call.Name, call.Arguments, outStr, errStr, 0); err != nil {
 			log.Printf("warn: unable to save tool call %s: %v", call.Name, err)
 		}
+	}
+
+	// Save the assistant response
+	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", result.Output, nil); err != nil {
+		log.Printf("warn: unable to save assistant message: %v", err)
 	}
 
 	s.realtimeHub.Publish(realtime.Event{
@@ -310,9 +310,10 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 				sendEvent("error", map[string]string{"error": streamErr.Error()})
 				return
 			}
+			// Accumulate text from every iteration (pre-tool text + final answer)
+			fullOutput += text
 			// No tool calls: final answer
 			if len(toolCalls) == 0 {
-				fullOutput = text
 				break
 			}
 			// Tool calls: notify client, execute, and continue loop
@@ -328,7 +329,8 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 					"kind":      kind,
 				})
 			}
-			assistantMsg := orchestrator.ChatMessage{Role: "assistant", ToolCalls: toolCalls}
+			// Include any pre-tool-call text in the assistant message so the LLM retains context
+			assistantMsg := orchestrator.ChatMessage{Role: "assistant", Content: text, ToolCalls: toolCalls}
 			loopMsgs = append(loopMsgs, assistantMsg)
 			for _, tc := range toolCalls {
 				result, execErr := toolExecutor(ctx, tc.Name, tc.Arguments)
@@ -390,15 +392,15 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", fullOutput, nil); err != nil {
-		log.Printf("warn: unable to save assistant message: %v", err)
-	}
-
-	// Persist captured tool calls (background, non-fatal)
+	// Persist captured tool calls before the assistant message so their timestamps sort earlier
 	for _, c := range capturedCalls {
 		if err := s.saveToolCall(ctx, userID, req.ConversationID, c.name, c.args, c.out, c.err, 0); err != nil {
 			log.Printf("warn: unable to save tool call %s: %v", c.name, err)
 		}
+	}
+
+	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", fullOutput, nil); err != nil {
+		log.Printf("warn: unable to save assistant message: %v", err)
 	}
 }
 
@@ -627,9 +629,6 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 
 	sendEvent("done", map[string]string{"output": fullOutput})
 
-	if err := s.updateMessageContent(ctx, userID, convID, msgID, fullOutput); err != nil {
-		log.Printf("warn: unable to update regenerated message %s: %v", msgID, err)
-	}
 	if err := s.deleteToolCallsSince(ctx, userID, convID, regenerateCreatedAt); err != nil {
 		log.Printf("warn: unable to delete stale tool calls for conversation %s: %v", convID, err)
 	}
@@ -637,6 +636,10 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 		if err := s.saveToolCall(ctx, userID, convID, c.name, c.args, c.out, c.err, 0); err != nil {
 			log.Printf("warn: unable to save regenerated tool call %s: %v", c.name, err)
 		}
+	}
+	// Update content last so created_at (reset to NOW()) stays after the tool calls
+	if err := s.updateMessageContent(ctx, userID, convID, msgID, fullOutput); err != nil {
+		log.Printf("warn: unable to update regenerated message %s: %v", msgID, err)
 	}
 }
 

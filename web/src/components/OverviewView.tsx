@@ -119,7 +119,7 @@ function WorkerTerminal({ workerKey, label }: { workerKey: string; label: string
   );
 }
 
-// ─── Status Card with colored border/bg ───
+// ─── Glassy status card — reused for all three indicators ───
 
 function StatusCard({
   title,
@@ -132,19 +132,26 @@ function StatusCard({
 }) {
   const borderColor =
     status === "ok"
-      ? "border-success/50"
+      ? "border-success/30"
       : status === "error"
-        ? "border-error/50"
-        : "border-[var(--color-outline-ghost)]";
-  const bgColor =
-    status === "ok" ? "bg-success/5" : status === "error" ? "bg-error/5" : "bg-surface-mid";
-
+        ? "border-error/30"
+        : "border-white/10";
+  const gradientFrom =
+    status === "ok" ? "from-success/10" : status === "error" ? "from-error/10" : "from-white/5";
   return (
-    <div className={`rounded-sm border ${borderColor} ${bgColor} p-4`}>
-      <p className="text-xs font-mono uppercase tracking-wider text-on-surface-variant mb-3">
-        {title}
-      </p>
-      {children}
+    <div
+      className={`relative rounded-2xl border ${borderColor} bg-surface-low/70 backdrop-blur-xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.25)]`}
+    >
+      {/* Gradient fill */}
+      <div
+        className={`absolute inset-0 bg-gradient-to-br ${gradientFrom} via-transparent to-transparent pointer-events-none`}
+      />
+      <div className="relative p-5">
+        <p className="text-xs font-mono uppercase tracking-wider text-on-surface-variant mb-3">
+          {title}
+        </p>
+        {children}
+      </div>
     </div>
   );
 }
@@ -315,7 +322,7 @@ export default function OverviewView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-2xl text-on-surface">Overview</h2>
+          <h2 className="font-display text-3xl font-semibold text-on-surface">Overview</h2>
           <p className="mt-1 text-sm text-on-surface-variant">
             Live status of server connection and background workers
           </p>

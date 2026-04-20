@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import ChatShell from "@/components/ChatShell";
 import ConfigStudio from "@/components/ConfigStudio";
 import OverviewView from "@/components/OverviewView";
 import TerminalView from "@/components/TerminalView";
-import { ChatIcon, LogoutIcon, OverviewIcon, TerminalIcon, ToolIcon } from "@/components/ui/icons";
+import {
+  ChatIcon,
+  LogoutIcon,
+  OverviewIcon,
+  TerminalIcon,
+  ToolIcon,
+  TrashIcon,
+} from "@/components/ui/icons";
 import { clearTokens, endpoints, type ConversationDTO } from "@/lib/api";
 
 type Section = "chat" | "config" | "overview" | "terminal";
@@ -51,7 +58,7 @@ function SidebarNavButton({
         onNavigate?.();
       }}
       title={tooltip}
-      className={`flex w-full items-center gap-3 rounded-sm px-4 py-2.5 text-sm transition-colors duration-150 ${
+      className={`flex w-full items-center gap-3 cursor-pointer rounded-lg px-4 py-2.5 text-base transition-colors duration-150 ${
         active
           ? "text-violet-light"
           : "text-on-surface-variant hover:bg-surface-mid/50 hover:text-on-surface"
@@ -103,26 +110,24 @@ export default function AuthenticatedApp({
   const [showSystemChats, setShowSystemChats] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Close sidebar whenever the active section/conversation changes (mobile UX)
+  const initialLoadDone = useRef(false);
+
+  // Single source of truth for conversations lives in useChatSession (via ChatShell).
+  // This callback receives the authoritative list and handles first-load side effects.
+  const handleConversationsUpdate = useCallback((list: ConversationDTO[]) => {
+    setConversations(list);
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      setLoadingConversations(false);
+      if (list.length > 0) {
+        setActiveConversationId((prev) => prev ?? list[0].id);
+      }
+    }
+  }, []);
+
   function closeSidebar() {
     setSidebarOpen(false);
   }
-
-  useEffect(() => {
-    setLoadingConversations(true);
-    endpoints
-      .listConversations()
-      .then((items) => {
-        setConversations(items);
-        if (!activeConversationId && items.length > 0) setActiveConversationId(items[0].id);
-      })
-      .catch(() => {
-        setConversations([]);
-        setActiveConversationId(null);
-      })
-      .finally(() => setLoadingConversations(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function handleLogout() {
     try {
@@ -197,7 +202,7 @@ export default function AuthenticatedApp({
         }`}
       >
         {/* ── Sidebar ── */}
-        <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-hidden rounded-2xl border border-violet bg-surface-lowest/80 backdrop-blur-2xl shadow-[var(--shadow-float)]">
+        <aside className="flex h-full w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-violet bg-surface-lowest/80 backdrop-blur-2xl shadow-[var(--shadow-float)]">
           {/* Atmospheric glow */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -left-20 -top-20 h-60 w-60 rounded-full bg-violet/[0.06] blur-3xl" />
@@ -206,7 +211,7 @@ export default function AuthenticatedApp({
 
           {/* Branding */}
           <div className="relative px-5 pt-6 pb-4">
-            <h1 className="font-display text-3xl font-bold tracking-tight flex items-center gap-2">
+            <h1 className="font-display text-4xl font-bold tracking-tight flex items-center gap-2">
               <span>
                 <span className="text-on-surface-variant">open</span>
                 <span className="text-violet-light">Crow</span>
@@ -219,9 +224,7 @@ export default function AuthenticatedApp({
                 className="opacity-90 mx-4 crow-icon"
               />
             </h1>
-            <p className="mt-1 font-mono text-xs text-on-surface-variant">
-              {openCrowVersion} . Active
-            </p>
+            <p className="mt-1 font-mono text-xs text-on-surface-variant">{openCrowVersion}</p>
           </div>
 
           {/* Conversation nav */}
@@ -233,7 +236,7 @@ export default function AuthenticatedApp({
                 setActiveConversationId(null);
                 closeSidebar();
               }}
-              className="mb-3 flex w-full items-center justify-center gap-2 rounded-sm bg-violet px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet/90"
+              className="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-violet px-4 py-2.5 text-base font-medium text-white transition-colors hover:bg-violet/90"
             >
               <ChatIcon />
               New chat
@@ -252,7 +255,7 @@ export default function AuthenticatedApp({
                     {showSystemChats ? "No chats yet" : "No user or heartbeat chats yet"}
                   </p>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-1 p-0.5">
                     {visibleConversations.map((chat) => {
                       const isActive = activeSection === "chat" && activeConversationId === chat.id;
                       const isAutomatic = !!chat.isAutomatic;
@@ -263,22 +266,22 @@ export default function AuthenticatedApp({
                       return (
                         <div
                           key={chat.id}
-                          className={`group relative flex items-center rounded-sm transition-all ${
+                          className={`group relative flex items-center rounded-lg transition-all ${
                             isChannel
                               ? isActive
-                                ? "bg-surface-mid ring-2 ring-cyan/50 shadow-[0_4px_20px_4px_color-mix(in_srgb,var(--color-cyan)_18%,transparent)]"
-                                : "bg-surface-low hover:bg-surface-mid/70"
+                                ? "bg-surface-mid/80 ring-1 ring-cyan/40 shadow-[0_4px_20px_4px_color-mix(in_srgb,var(--color-cyan)_12%,transparent)]"
+                                : "bg-surface-low/60 hover:bg-surface-mid/50"
                               : isAutomatic
                                 ? isActive
-                                  ? "bg-surface-mid shadow-[inset_0_0_0_1px_var(--color-outline-ghost)]"
-                                  : "bg-surface-low hover:bg-surface-mid/70"
+                                  ? "bg-surface-mid/80 ring-1 ring-outline-ghost"
+                                  : "bg-surface-low/60 hover:bg-surface-mid/50"
                                 : isActive
-                                  ? "bg-surface-mid"
-                                  : "hover:bg-surface-mid/50"
+                                  ? "bg-surface-mid/80 ring-1 ring-violet/20"
+                                  : "hover:bg-surface-mid/40"
                           }`}
                         >
                           <div
-                            className={`absolute inset-y-2 left-0 w-[3px] rounded-r-sm ${isActive ? "bg-violet" : isChannel ? "bg-cyan" : isAutomatic ? "bg-warning/70" : "bg-cyan/70"}`}
+                            className={`absolute inset-y-2 left-0 w-[3px] rounded-r-full ${isActive ? "bg-violet" : isChannel ? "bg-cyan" : isAutomatic ? "bg-warning/70" : "bg-cyan/70"}`}
                           />
                           <button
                             onClick={() => {
@@ -287,7 +290,7 @@ export default function AuthenticatedApp({
                               setActiveConversationId(chat.id);
                               closeSidebar();
                             }}
-                            className={`flex-1 min-w-0 px-3 py-2 text-left ${
+                            className={`flex-1 min-w-0 cursor-pointer px-3 py-2 text-left ${
                               isChannel
                                 ? isActive
                                   ? "text-on-surface"
@@ -324,18 +327,16 @@ export default function AuthenticatedApp({
                             </div>
                             <div className="mt-1 flex items-center gap-2">
                               {isChannel && (
-                                <span
-                                  className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider ${isActive ? "bg-cyan/12 text-cyan" : "bg-cyan/10 text-cyan/70"}`}
-                                >
+                                <span className="inline-flex items-center whitespace-nowrap rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider text-cyan">
                                   pinned · read-only
                                 </span>
                               )}
                               {isAutomatic && !isChannel && (
                                 <span
-                                  className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
+                                  className={`inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
                                     isActive
-                                      ? "bg-violet/12 text-violet"
-                                      : "bg-warning/12 text-warning"
+                                      ? "border-violet/30 bg-violet/10 text-violet"
+                                      : "border-warning/30 bg-warning/10 text-warning"
                                   }`}
                                 >
                                   {automationLabel(chat.automationKind)}
@@ -353,22 +354,14 @@ export default function AuthenticatedApp({
                               setConversations((prev) => prev.filter((c) => c.id !== chat.id));
                               if (activeConversationId === chat.id) setActiveConversationId(null);
                             }}
-                            className={`shrink-0 px-2 py-2 transition-all ${
+                            className={`shrink-0 cursor-pointer px-2 py-2 transition-all ${
                               isAutomatic
                                 ? "text-on-surface-variant/60 opacity-100 group-hover:text-error"
                                 : "text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-red-400"
                             }`}
                             title="Delete conversation"
                           >
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                              <path
-                                d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
+                            <TrashIcon />
                           </button>
                         </div>
                       );
@@ -377,7 +370,7 @@ export default function AuthenticatedApp({
                 )}
               </div>
 
-              <label className="mt-2 shrink-0 flex items-center justify-between gap-3 rounded-sm border-t border-outline-ghost px-2 py-3 text-xs font-mono text-on-surface-variant">
+              <label className="mt-2 shrink-0 flex items-center justify-between gap-3 rounded-sm border-t border-outline-ghost px-2 py-3 text-sm font-mono text-on-surface-variant">
                 <span>Show system chats</span>
                 <button
                   type="button"
@@ -396,7 +389,7 @@ export default function AuthenticatedApp({
                       return next;
                     });
                   }}
-                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${showSystemChats ? "bg-violet" : "bg-surface-high"}`}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${showSystemChats ? "bg-violet" : "bg-surface-high"}`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showSystemChats ? "translate-x-4" : "translate-x-0.5"}`}
@@ -430,7 +423,7 @@ export default function AuthenticatedApp({
             <SidebarNavButton
               section="config"
               icon={<ToolIcon />}
-              label="Config"
+              label="Configuration"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
               setRequestedConfigTab={setRequestedConfigTab}
@@ -438,7 +431,7 @@ export default function AuthenticatedApp({
             />
             <button
               onClick={() => void handleLogout()}
-              className="flex w-full items-center gap-3 rounded-sm px-4 py-2.5 text-sm text-on-surface-variant transition-colors duration-150 hover:text-error"
+              className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-2.5 text-base text-on-surface-variant transition-colors duration-150 hover:text-error"
             >
               <LogoutIcon />
               Logout
@@ -469,33 +462,47 @@ export default function AuthenticatedApp({
       </div>
 
       {/* ── Main Content ── */}
-      <div className="md:ml-[312px] flex h-screen flex-col">
+      <div className="md:ml-[332px] flex h-screen flex-col">
         {activeSection === "chat" ? (
-          <ChatShell
-            activeConversationId={activeConversationId}
-            onActiveConversationChange={setActiveConversationId}
-            onConversationsUpdate={setConversations}
-            readOnly={isReadOnly}
-          />
+          <div
+            key="chat"
+            className="flex-1 flex flex-col min-w-0 overflow-hidden animate-in fade-in duration-200"
+          >
+            <ChatShell
+              activeConversationId={activeConversationId}
+              onActiveConversationChange={setActiveConversationId}
+              onConversationsUpdate={handleConversationsUpdate}
+              readOnly={isReadOnly}
+            />
+          </div>
         ) : activeSection === "overview" ? (
-          <div className="flex-1 overflow-y-auto p-8">
+          <div
+            key="overview"
+            className="flex-1 overflow-y-auto p-8 animate-in fade-in slide-in-from-bottom-3 duration-300"
+          >
             <OverviewView />
           </div>
         ) : activeSection === "terminal" ? (
-          <div className="flex-1 overflow-hidden p-8 flex flex-col">
+          <div
+            key="terminal"
+            className="flex-1 overflow-hidden p-8 flex flex-col animate-in fade-in slide-in-from-bottom-3 duration-300"
+          >
             <TerminalView />
           </div>
         ) : activeSection === "config" ? (
-          <>
+          <div
+            key="config"
+            className="flex-1 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300"
+          >
             <header className="shrink-0 flex items-center justify-between bg-surface/80 px-8 py-4 backdrop-blur-xl border-b border-outline-ghost">
-              <h2 className="font-display text-xl text-on-surface">
+              <h2 className="font-display text-3xl font-semibold text-on-surface">
                 {sectionTitles[activeSection]}
               </h2>
             </header>
             <main className="flex-1 overflow-y-auto p-8">
               <ConfigStudio requestedTab={requestedConfigTab} />
             </main>
-          </>
+          </div>
         ) : null}
       </div>
     </div>

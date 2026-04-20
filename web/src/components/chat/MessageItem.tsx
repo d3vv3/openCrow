@@ -1,7 +1,7 @@
 import { formatTime, isUuid } from "./helpers";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { formatAttachmentSize } from "./attachments";
-import { FileIcon, CopyIcon, RegenIcon } from "@/components/ui/icons";
+import { FileIcon, CopyIcon, RegenIcon, SparkleIcon, UserIcon } from "@/components/ui/icons";
 import type { MessageDTO } from "@/lib/api";
 
 type MessageItemProps = {
@@ -40,32 +40,37 @@ export function MessageItem({
 
   return (
     <div
-      className={`flex group ${isUser ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+      className={`flex group items-start gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
     >
-      {!isUser && (
-        <div className="shrink-0 mt-3 mr-2">
-          <span className="block h-2 w-2 rounded-full bg-cyan" />
+      {/* Avatar */}
+      {isUser ? (
+        <div className="hidden sm:flex shrink-0 mt-1 h-11 w-11 rounded-full bg-violet items-center justify-center shadow-[0_0_18px_rgba(124,58,237,0.75)]">
+          <UserIcon className="text-white w-5 h-5" />
+        </div>
+      ) : (
+        <div className="hidden sm:flex shrink-0 mt-1 h-11 w-11 rounded-full bg-[#0d0d1a] border border-white/10 items-center justify-center shadow-[0_0_12px_rgba(0,0,0,0.5)]">
+          <SparkleIcon className="text-violet-light w-5 h-5" />
         </div>
       )}
+
+      {/* Bubble */}
       <div
-        className={`max-w-[70%] rounded-lg p-4 border ${isUser ? "bg-violet/5 border-violet/20" : "bg-surface-high border-outline-ghost"}`}
+        className={`max-w-full sm:max-w-[78%] rounded-2xl px-4 py-3 ${
+          isUser
+            ? "bg-violet text-white shadow-[0_6px_28px_rgba(124,58,237,0.38)]"
+            : "bg-surface-high border border-white/8 shadow-sm"
+        }`}
       >
-        <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-on-surface-variant font-mono mb-1">
-          {msg.role}
-          <span className="inline-block h-1 w-1 rounded-full bg-on-surface-variant/50" />
-          {formatTime(msg.createdAt)}
-        </p>
-        <div className="text-sm text-on-surface font-body break-words">
+        <div
+          className={`text-base font-body break-words ${isUser ? "text-white" : "text-on-surface"}`}
+        >
           {msg.role === "assistant" && msg.id === streamingMsgId && msg.content === "" ? (
             <div className="flex items-center gap-2 py-0.5">
               {[3, 1.5, 2].map((w, i) => (
                 <div
                   key={i}
                   className="h-[1em] rounded bg-on-surface-variant/20 animate-pulse"
-                  style={{
-                    width: `${w}rem`,
-                    animationDelay: `${i * 150}ms`,
-                  }}
+                  style={{ width: `${w}rem`, animationDelay: `${i * 150}ms` }}
                 />
               ))}
             </div>
@@ -79,27 +84,26 @@ export function MessageItem({
             <div className="mt-3 grid gap-2">
               {msg.attachments.map((att, index) => {
                 const isImage = att.mimeType?.startsWith("image/");
-                const attachmentKey = att.id || `${att.fileName}-${index}`;
                 return (
                   <a
-                    key={attachmentKey}
+                    key={att.id || `${att.fileName}-${index}`}
                     href={att.dataUrl}
                     download={att.fileName}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-md border border-white/10 bg-surface-mid px-3 py-2 text-xs hover:bg-surface-high transition-colors overflow-hidden"
+                    className={`rounded-lg border px-3 py-2 text-xs hover:opacity-80 transition-opacity overflow-hidden ${isUser ? "border-white/20 bg-white/10" : "border-white/10 bg-surface-mid"}`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       {isImage ? (
-                        <span className="font-mono text-on-surface-variant">IMG</span>
+                        <span className="font-mono opacity-70">IMG</span>
                       ) : (
-                        <FileIcon className="h-4 w-4 text-on-surface-variant" aria-hidden="true" />
+                        <FileIcon className="h-4 w-4 opacity-70" aria-hidden="true" />
                       )}
                       <span className="min-w-0 flex-1 truncate font-medium">{att.fileName}</span>
-                      <span className="ml-auto shrink-0 max-w-[45%] truncate text-right text-on-surface-variant font-mono">
+                      <span className="ml-auto shrink-0 max-w-[45%] truncate text-right opacity-60 font-mono">
                         {[att.mimeType, formatAttachmentSize(att.sizeBytes)]
                           .filter(Boolean)
-                          .join(" . ")}
+                          .join(" · ")}
                       </span>
                     </div>
                   </a>
@@ -108,28 +112,39 @@ export function MessageItem({
             </div>
           )}
         </div>
-        {!isUser && (
-          <div className="flex items-center justify-end gap-0.5 mt-2">
-            <button
-              onClick={() => msg.content && onCopy(msg.id, msg.content)}
-              disabled={!msg.content}
-              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-on-surface px-1.5 py-0.5 rounded hover:cursor-pointer transition-colors font-mono disabled:opacity-30 disabled:cursor-default"
-              title="Copy"
-            >
-              {copiedId === msg.id ? <span className="text-[10px]">copied</span> : <CopyIcon />}
-            </button>
-            {canRegenerate && (
+
+        {/* Timestamp + actions */}
+        <div
+          className={`flex items-center gap-0.5 mt-2 ${isUser ? "justify-start" : "justify-between"}`}
+        >
+          <span
+            className={`text-[10px] font-mono ${isUser ? "text-white/50" : "text-on-surface-variant/60"}`}
+          >
+            {formatTime(msg.createdAt)}
+          </span>
+          {!isUser && (
+            <div className="flex items-center gap-0.5 ml-auto">
               <button
-                onClick={() => onRegenerate(msg.id)}
-                disabled={!!regeneratingId || !msg.content}
-                className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-cyan px-1.5 py-0.5 rounded hover:cursor-pointer transition-colors font-mono disabled:opacity-30 disabled:cursor-default"
-                title="Regenerate"
+                onClick={() => msg.content && onCopy(msg.id, msg.content)}
+                disabled={!msg.content}
+                className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-on-surface px-1.5 py-0.5 rounded hover:cursor-pointer transition-colors font-mono disabled:opacity-30 disabled:cursor-default"
+                title="Copy"
               >
-                <RegenIcon className={regeneratingId === msg.id ? "animate-spin" : ""} />
+                {copiedId === msg.id ? <span className="text-[10px]">copied</span> : <CopyIcon />}
               </button>
-            )}
-          </div>
-        )}
+              {canRegenerate && (
+                <button
+                  onClick={() => onRegenerate(msg.id)}
+                  disabled={!!regeneratingId || !msg.content}
+                  className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-cyan px-1.5 py-0.5 rounded hover:cursor-pointer transition-colors font-mono disabled:opacity-30 disabled:cursor-default"
+                  title="Regenerate"
+                >
+                  <RegenIcon className={regeneratingId === msg.id ? "animate-spin" : ""} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

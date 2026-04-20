@@ -90,7 +90,12 @@ export function MarkdownMessage({
           </blockquote>
         ),
         a: ({ href, children }) => (
-          <a href={href} target="_blank" rel="noopener" className="text-violet underline">
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener"
+            className="text-white/90 underline decoration-white/50"
+          >
             {children}
           </a>
         ),
