@@ -1059,6 +1059,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/devices/{id}": {
+            "delete": {
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Delete a device registration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/devices/{id}/register": {
             "post": {
                 "security": [
@@ -3352,6 +3380,10 @@ const docTemplate = `{
                 "conversationId": {
                     "type": "string"
                 },
+                "deviceId": {
+                    "description": "requesting device, used to inject local tool specs",
+                    "type": "string"
+                },
                 "maxRetries": {
                     "type": "integer"
                 },
@@ -3450,6 +3482,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "targetDevice": {
+                    "type": "string"
+                },
+                "toolArguments": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "toolName": {
                     "type": "string"
                 }
             }
@@ -3665,6 +3704,11 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "parameters": {
+                    "description": "JSON Schema object for LLM function-calling",
+                    "type": "object",
+                    "additionalProperties": {}
                 }
             }
         },
@@ -3707,6 +3751,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "targetDevice": {
+                    "type": "string"
+                },
+                "toolArguments": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "toolName": {
                     "type": "string"
                 },
                 "updatedAt": {
@@ -3833,6 +3884,9 @@ const docTemplate = `{
             "properties": {
                 "enabled": {
                     "type": "boolean"
+                },
+                "heartbeatPrompt": {
+                    "type": "string"
                 },
                 "intervalSeconds": {
                     "type": "integer"
@@ -4475,6 +4529,9 @@ const docTemplate = `{
             "properties": {
                 "enabled": {
                     "type": "boolean"
+                },
+                "heartbeatPrompt": {
+                    "type": "string"
                 },
                 "intervalSeconds": {
                     "type": "integer"

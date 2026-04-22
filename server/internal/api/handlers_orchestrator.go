@@ -119,7 +119,7 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 		if call.Status != "error" {
 			outStr = call.Output
 		}
-		if err := s.saveToolCall(ctx, userID, req.ConversationID, call.Name, call.Arguments, outStr, errStr, 0); err != nil {
+		if err := s.saveToolCall(ctx, userID, req.ConversationID, call.Name, call.Arguments, outStr, errStr, 0, "builtin"); err != nil {
 			log.Printf("warn: unable to save tool call %s: %v", call.Name, err)
 		}
 	}
@@ -226,6 +226,64 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 
 	toolSpecs := s.buildEnabledToolSpecs(ctx, cfg)
 
+	// scheduleableDeviceTools is the set of device tool base-names that make sense
+	// to queue as async device_tasks when no device is actively connected.
+	// Ephemeral tools (flashlight, volume, brightness, ...) are intentionally excluded.
+	scheduleableDeviceTools := map[string]bool{
+		"set_alarm":             true,
+		"create_calendar_event": true,
+		"create_contact":        true,
+		"send_sms":              true,
+		"send_notification":     true,
+	}
+
+	// Inject local tool specs registered by the requesting device
+	localToolNames := map[string]bool{}        // bare name -> true (live execution via SSE)
+	scheduleToolTargets := map[string]string{} // bare name -> target device ID (async scheduling)
+
+	if req.DeviceID != "" {
+		// Device is actively connected - expose all its capabilities for live execution.
+		if devCaps, err := s.getDeviceCapabilities(ctx, userID, req.DeviceID); err == nil {
+			for _, cap := range devCaps {
+				baseName := strings.TrimPrefix(cap.Name, "on_device_")
+				toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
+					Name:        baseName,
+					Description: cap.Description,
+					Parameters:  cap.Parameters,
+				})
+				localToolNames[baseName] = true
+			}
+		}
+	} else {
+		// No active device - expose only scheduleable tools from registered devices.
+		// They will be queued as device_tasks when called by the LLM.
+		if devRegs, err := s.listDeviceRegistrations(ctx, userID); err == nil {
+			for deviceID, reg := range devRegs {
+				for _, cap := range reg.Capabilities {
+					baseName := strings.TrimPrefix(cap.Name, "on_device_")
+					if !scheduleableDeviceTools[baseName] {
+						continue
+					}
+					if _, already := scheduleToolTargets[baseName]; already {
+						continue // only register first device per tool
+					}
+					desc := cap.Description
+					if desc != "" {
+						desc += " (will be scheduled on your companion device)"
+					} else {
+						desc = "Will be scheduled on your companion device"
+					}
+					toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
+						Name:        baseName,
+						Description: desc,
+						Parameters:  cap.Parameters,
+					})
+					scheduleToolTargets[baseName] = deviceID
+				}
+			}
+		}
+	}
+
 	history, err := s.listMessages(ctx, userID, req.ConversationID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "conversation not found")
@@ -276,16 +334,17 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 
 	// Collect tool calls for persistence
 	type capturedCall struct {
-		name string
-		args map[string]any
-		out  string
-		err  string
+		name   string
+		args   map[string]any
+		out    string
+		err    string
+		source string // "builtin", "mcp", or "device"
 	}
 	var mu sync.Mutex
 	var capturedCalls []capturedCall
 
-	recordCall := func(name string, args map[string]any, out string, execErr error) {
-		c := capturedCall{name: name, args: args, out: out}
+	recordCall := func(name string, args map[string]any, out string, execErr error, source string) {
+		c := capturedCall{name: name, args: args, out: out, source: source}
 		if execErr != nil {
 			c.err = execErr.Error()
 			c.out = ""
@@ -322,6 +381,8 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 				kind := "MCP"
 				if isBuiltinToolName(tc.Name) {
 					kind = "TOOL"
+				} else if localToolNames[tc.Name] || scheduleToolTargets[tc.Name] != "" {
+					kind = "DEVICE"
 				}
 				sendEvent("tool_call", map[string]string{
 					"name":      tc.Name,
@@ -333,11 +394,52 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 			assistantMsg := orchestrator.ChatMessage{Role: "assistant", Content: text, ToolCalls: toolCalls}
 			loopMsgs = append(loopMsgs, assistantMsg)
 			for _, tc := range toolCalls {
-				result, execErr := toolExecutor(ctx, tc.Name, tc.Arguments)
-				if execErr != nil {
-					result = execErr.Error()
+				var result string
+				var execErr error
+				callSource := "builtin"
+				if isLocal := localToolNames[tc.Name]; isLocal && req.DeviceID != "" {
+					callSource = "device"
+					// Forward to device via SSE, block until result
+					callId := fmt.Sprintf("lc-%s-%d", tc.Name, time.Now().UnixNano())
+					resultCh := make(chan localCallResult, 1)
+					s.pendingLocalCalls.Store(callId, resultCh)
+					defer s.pendingLocalCalls.Delete(callId)
+					argsJSON, _ := json.Marshal(tc.Arguments)
+					sendEvent("tool_execute_local", map[string]string{
+						"callId":    callId,
+						"name":      tc.Name,
+						"arguments": string(argsJSON),
+					})
+					select {
+					case res := <-resultCh:
+						result = res.Output
+						if res.IsError {
+							execErr = fmt.Errorf("%s", res.Output)
+							result = ""
+						}
+					case <-time.After(30 * time.Second):
+						execErr = fmt.Errorf("local tool %s timed out after 30s", tc.Name)
+					}
+				} else if targetDeviceID, isScheduled := scheduleToolTargets[tc.Name]; isScheduled {
+					callSource = "device"
+					// Queue as an async device_task (web UI path - no live device connection)
+					toolNameStr := tc.Name
+					task, taskErr := s.createDeviceTask(ctx, userID, targetDeviceID, tc.Name, &toolNameStr, tc.Arguments)
+					if taskErr != nil {
+						execErr = fmt.Errorf("failed to schedule device task: %w", taskErr)
+					} else {
+						result = fmt.Sprintf("Scheduled on your companion device (task ID: %s). The action will execute the next time your device checks in.", task.ID)
+					}
+				} else {
+					if !isBuiltinToolName(tc.Name) {
+						callSource = "mcp"
+					}
+					result, execErr = toolExecutor(ctx, tc.Name, tc.Arguments)
+					if execErr != nil {
+						result = execErr.Error()
+					}
 				}
-				recordCall(tc.Name, tc.Arguments, result, execErr)
+				recordCall(tc.Name, tc.Arguments, result, execErr, callSource)
 				toolResultPayload := map[string]string{
 					"name":   tc.Name,
 					"result": truncateOutput(result, 200),
@@ -346,14 +448,18 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 					toolResultPayload["isError"] = "true"
 				}
 				sendEvent("tool_result", toolResultPayload)
+				loopResultContent := result
+				if execErr != nil {
+					loopResultContent = execErr.Error()
+				}
 				loopMsgs = append(loopMsgs, orchestrator.ChatMessage{
-					Role: "tool", Content: result, ToolCallID: tc.ID,
+					Role: "tool", Content: loopResultContent, ToolCallID: tc.ID,
 				})
 			}
 		}
 		// Persist tool calls before the assistant message so their timestamps sort earlier.
 		for _, c := range capturedCalls {
-			if err := s.saveToolCall(ctx, userID, req.ConversationID, c.name, c.args, c.out, c.err, 0); err != nil {
+			if err := s.saveToolCall(ctx, userID, req.ConversationID, c.name, c.args, c.out, c.err, 0, c.source); err != nil {
 				log.Printf("warn: unable to save tool call %s: %v", c.name, err)
 			}
 		}
@@ -373,9 +479,11 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 		baseExecutor := s.buildToolExecutor(ctx, userID)
 		wrappedExecutor := func(ectx context.Context, name string, args map[string]any) (string, error) {
 			argsJSON, _ := json.Marshal(args)
-			kind := "MCP"
-			if isBuiltinToolName(name) {
-				kind = "TOOL"
+			src := "builtin"
+			kind := "TOOL"
+			if !isBuiltinToolName(name) {
+				src = "mcp"
+				kind = "MCP"
 			}
 			sendEvent("tool_call", map[string]string{"name": name, "arguments": string(argsJSON), "kind": kind})
 			res, err := baseExecutor(ectx, name, args)
@@ -384,7 +492,7 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 			} else {
 				sendEvent("tool_result", map[string]string{"name": name, "result": truncateOutput(res, 200)})
 			}
-			recordCall(name, args, res, err)
+			recordCall(name, args, res, err, src)
 			return res, err
 		}
 		svc := orchestrator.NewService(fallbackProviders, orchestrator.ToolLoopGuard{})
@@ -400,7 +508,7 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 		fullOutput = result.Output
 		// Persist tool calls before the assistant message so their timestamps sort earlier.
 		for _, c := range capturedCalls {
-			if err := s.saveToolCall(ctx, userID, req.ConversationID, c.name, c.args, c.out, c.err, 0); err != nil {
+			if err := s.saveToolCall(ctx, userID, req.ConversationID, c.name, c.args, c.out, c.err, 0, c.source); err != nil {
 				log.Printf("warn: unable to save tool call %s: %v", c.name, err)
 			}
 		}
@@ -567,16 +675,17 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 	var fullOutput string
 
 	type capturedCall struct {
-		name string
-		args map[string]any
-		out  string
-		err  string
+		name   string
+		args   map[string]any
+		out    string
+		err    string
+		source string
 	}
 	var mu sync.Mutex
 	var capturedCalls []capturedCall
 
-	recordCall := func(name string, args map[string]any, out string, execErr error) {
-		c := capturedCall{name: name, args: args, out: out}
+	recordCall := func(name string, args map[string]any, out string, execErr error, source string) {
+		c := capturedCall{name: name, args: args, out: out, source: source}
 		if execErr != nil {
 			c.err = execErr.Error()
 			c.out = ""
@@ -618,7 +727,11 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 				if execErr != nil {
 					result = execErr.Error()
 				}
-				recordCall(tc.Name, tc.Arguments, result, execErr)
+				src := "builtin"
+				if !isBuiltinToolName(tc.Name) {
+					src = "mcp"
+				}
+				recordCall(tc.Name, tc.Arguments, result, execErr, src)
 				toolResultPayload := map[string]string{"name": tc.Name, "result": truncateOutput(result, 200)}
 				if execErr != nil {
 					toolResultPayload["isError"] = "true"
@@ -644,7 +757,11 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 				} else {
 					sendEvent("tool_result", map[string]string{"name": name, "result": truncateOutput(res, 200)})
 				}
-				recordCall(name, args, res, err)
+				rSrc := "builtin"
+				if !isBuiltinToolName(name) {
+					rSrc = "mcp"
+				}
+				recordCall(name, args, res, err, rSrc)
 				return res, err
 			},
 		})
@@ -668,7 +785,7 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 		log.Printf("warn: unable to delete stale tool calls for conversation %s: %v", convID, err)
 	}
 	for _, c := range capturedCalls {
-		if err := s.saveToolCall(ctx, userID, convID, c.name, c.args, c.out, c.err, 0); err != nil {
+		if err := s.saveToolCall(ctx, userID, convID, c.name, c.args, c.out, c.err, 0, c.source); err != nil {
 			log.Printf("warn: unable to save regenerated tool call %s: %v", c.name, err)
 		}
 	}

@@ -17,21 +17,29 @@ export function DevicesTab({
   updateConfig,
   saving,
   saveFullConfig,
+  saveWithUpdate,
   saveStatus,
 }: {
   config: UserConfig;
   updateConfig: UpdateConfigFn;
   saving: boolean;
   saveFullConfig: () => void;
+  saveWithUpdate: (updater: (draft: UserConfig) => UserConfig) => void;
   saveStatus: string | null;
 }) {
   const [registrations, setRegistrations] = useState<Record<string, DeviceRegistration>>({});
   const [serverUrl, setServerUrl] = useState(() => getApiBase());
   const [isAddingDevice, setIsAddingDevice] = useState(false);
+  const [removingOrphan, setRemovingOrphan] = useState<string | null>(null);
+  const [now] = useState(() => Date.now());
 
   const companionApps = config.integrations.companionApps || [];
+  const configuredIds = new Set(companionApps.map((a) => a.id).filter(Boolean));
+  const orphanRegistrations = Object.values(registrations).filter(
+    (r) => !configuredIds.has(r.deviceId),
+  );
 
-  useEffect(() => {
+  const loadRegistrations = () => {
     endpoints
       .listDeviceRegistrations()
       .then((res) => {
@@ -40,7 +48,27 @@ export function DevicesTab({
         setRegistrations(map);
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadRegistrations();
   }, []);
+
+  const handleRemoveOrphan = async (deviceId: string) => {
+    setRemovingOrphan(deviceId);
+    try {
+      await endpoints.deleteDevice(deviceId);
+      setRegistrations((prev) => {
+        const next = { ...prev };
+        delete next[deviceId];
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to remove orphan device:", e);
+    } finally {
+      setRemovingOrphan(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -90,6 +118,56 @@ export function DevicesTab({
         />
       </div>
 
+      {orphanRegistrations.length > 0 && (
+        <>
+          <div className="h-px bg-white/10" />
+          <div className="space-y-4">
+            <SectionHeader
+              title="Orphan Registrations"
+              description="Devices registered in the database but not in your config. You can safely remove these."
+            />
+            {orphanRegistrations.map((reg) => {
+              const lastSeen = new Date(reg.lastSeenAt);
+              const isOnline = now - lastSeen.getTime() < 10 * 60 * 1000;
+              return (
+                <div
+                  key={reg.deviceId}
+                  className="flex items-center gap-3 p-4 rounded-lg border border-white/10 bg-surface-mid"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-mono text-on-surface-variant">
+                      {reg.deviceId}
+                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isOnline ? "bg-green-500/15 text-green-400" : "bg-white/5 text-on-surface-variant"}`}
+                      >
+                        {isOnline ? "online" : "offline"}
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant">
+                        last seen {lastSeen.toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant">
+                        {reg.capabilities?.length ?? 0} capabilities
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:text-error shrink-0"
+                    loading={removingOrphan === reg.deviceId}
+                    onClick={() => handleRemoveOrphan(reg.deviceId)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       <div className="h-px bg-white/10" />
 
       <div className="space-y-6">
@@ -103,8 +181,7 @@ export function DevicesTab({
       {isAddingDevice && (
         <AddDeviceModal
           serverUrl={serverUrl}
-          updateConfig={updateConfig}
-          saveFullConfig={saveFullConfig}
+          saveWithUpdate={saveWithUpdate}
           onClose={() => setIsAddingDevice(false)}
         />
       )}

@@ -23,6 +23,7 @@ export function CompanionAppCard({
   updateConfig: UpdateConfigFn;
 }) {
   const [generating, setGenerating] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(false);
 
@@ -33,6 +34,21 @@ export function CompanionAppCard({
         : false,
     );
   }, [registration]);
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      if (app.id) await endpoints.deleteDevice(app.id);
+    } catch (e) {
+      console.error("Failed to delete device on server:", e);
+    } finally {
+      setRemoving(false);
+    }
+    updateConfig((c) => {
+      c.integrations.companionApps.splice(i, 1);
+      return c;
+    });
+  };
 
   const handleRepair = async () => {
     setGenerating(true);
@@ -118,12 +134,8 @@ export function CompanionAppCard({
           variant="ghost"
           size="sm"
           className="ml-auto hover:text-error"
-          onClick={() =>
-            updateConfig((c) => {
-              c.integrations.companionApps.splice(i, 1);
-              return c;
-            })
-          }
+          onClick={handleRemove}
+          loading={removing}
         >
           Remove
         </Button>

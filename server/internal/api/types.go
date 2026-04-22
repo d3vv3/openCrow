@@ -158,6 +158,7 @@ type CompleteRequest struct {
 	Attachments    []CreateMessageAttachmentRequest `json:"attachments,omitempty"`
 	ProviderOrder  []string                         `json:"providerOrder,omitempty"`
 	MaxRetries     int                              `json:"maxRetries,omitempty"`
+	DeviceID       string                           `json:"deviceId,omitempty"` // requesting device, used to inject local tool specs
 }
 
 type CompleteResponse struct {
@@ -225,11 +226,13 @@ type HeartbeatConfigDTO struct {
 	IntervalSeconds int    `json:"intervalSeconds"`
 	NextRunAt       string `json:"nextRunAt,omitempty"`
 	UpdatedAt       string `json:"updatedAt"`
+	HeartbeatPrompt string `json:"heartbeatPrompt,omitempty"`
 }
 
 type UpdateHeartbeatConfigRequest struct {
-	Enabled         *bool `json:"enabled,omitempty"`
-	IntervalSeconds *int  `json:"intervalSeconds,omitempty"`
+	Enabled         *bool   `json:"enabled,omitempty"`
+	IntervalSeconds *int    `json:"intervalSeconds,omitempty"`
+	HeartbeatPrompt *string `json:"heartbeatPrompt,omitempty"`
 }
 
 type HeartbeatEventDTO struct {
@@ -299,8 +302,8 @@ type TestEmailConnectionRequest struct {
 }
 
 type MCPToolSummary struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
 	InputSchema map[string]any `json:"inputSchema,omitempty"`
 }
 
@@ -318,19 +321,23 @@ type MCPServerTestResult struct {
 }
 
 type DeviceTaskDTO struct {
-	ID           string  `json:"id"`
-	TargetDevice string  `json:"targetDevice"`
-	Instruction  string  `json:"instruction"`
-	Status       string  `json:"status"`
-	ResultOutput *string `json:"resultOutput,omitempty"`
-	CreatedAt    string  `json:"createdAt"`
-	UpdatedAt    string  `json:"updatedAt"`
-	ExpiresAt    *string `json:"expiresAt,omitempty"`
+	ID            string         `json:"id"`
+	TargetDevice  string         `json:"targetDevice"`
+	Instruction   string         `json:"instruction"`
+	ToolName      *string        `json:"toolName,omitempty"`
+	ToolArguments map[string]any `json:"toolArguments,omitempty"`
+	Status        string         `json:"status"`
+	ResultOutput  *string        `json:"resultOutput,omitempty"`
+	CreatedAt     string         `json:"createdAt"`
+	UpdatedAt     string         `json:"updatedAt"`
+	ExpiresAt     *string        `json:"expiresAt,omitempty"`
 }
 
 type CreateDeviceTaskRequest struct {
-	TargetDevice string `json:"targetDevice"`
-	Instruction  string `json:"instruction"`
+	TargetDevice  string         `json:"targetDevice"`
+	Instruction   string         `json:"instruction"`
+	ToolName      *string        `json:"toolName,omitempty"`
+	ToolArguments map[string]any `json:"toolArguments,omitempty"`
 }
 
 type CompleteDeviceTaskRequest struct {
@@ -339,8 +346,15 @@ type CompleteDeviceTaskRequest struct {
 }
 
 type DeviceCapability struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	Parameters  map[string]any `json:"parameters,omitempty"` // JSON Schema object for LLM function-calling
+}
+
+// ToolResultRequest is the body for POST /v1/tool-results/{callId}.
+type ToolResultRequest struct {
+	Output  string `json:"output"`
+	IsError bool   `json:"isError,omitempty"`
 }
 
 type RegisterDeviceRequest struct {

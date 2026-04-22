@@ -542,7 +542,7 @@ export const endpoints = {
     message: string,
     onToken: (token: string) => void,
     providerOrder?: string[],
-    onToolCall?: (name: string, args: string, kind?: "TOOL" | "MCP") => void,
+    onToolCall?: (name: string, args: string, kind?: "TOOL" | "MCP" | "DEVICE") => void,
     onToolResult?: (name: string, result: string, isError?: boolean) => void,
     onUsage?: (usage: TokenUsage) => void,
   ): Promise<string> => {
@@ -597,7 +597,14 @@ export const endpoints = {
               });
             }
           } else if (eventType === "tool_call" && onToolCall) {
-            const kind = data.kind === "MCP" ? "MCP" : data.kind === "TOOL" ? "TOOL" : undefined;
+            const kind =
+              data.kind === "MCP"
+                ? "MCP"
+                : data.kind === "DEVICE"
+                  ? "DEVICE"
+                  : data.kind === "TOOL"
+                    ? "TOOL"
+                    : undefined;
             onToolCall(data.name, data.arguments ?? "{}", kind);
           } else if (eventType === "tool_result" && onToolResult) {
             onToolResult(data.name, data.result ?? "", Boolean(data.error));
@@ -805,6 +812,7 @@ export const endpoints = {
     api<{ registrations: DeviceRegistration[] }>("/v1/devices/registrations"),
 
   // Device Pairing
+  deleteDevice: (deviceId: string) => api(`/v1/devices/${deviceId}`, { method: "DELETE" }),
   createDeviceTokens: (deviceLabel: string) =>
     api<{ tokens: { accessToken: string; refreshToken: string } }>("/v1/auth/device-tokens", {
       method: "POST",

@@ -21,6 +21,12 @@ func (s *Server) handleGetHeartbeatConfig(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "unable to load heartbeat config")
 		return
 	}
+	// Attach the user's custom heartbeat prompt from configStore
+	if s.configStore != nil {
+		if cfg, err := s.configStore.GetUserConfig(userID); err == nil {
+			config.HeartbeatPrompt = cfg.Prompts.HeartbeatPrompt
+		}
+	}
 	writeJSON(w, http.StatusOK, config)
 }
 
@@ -41,10 +47,20 @@ func (s *Server) handlePutHeartbeatConfig(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
+	// Save heartbeat prompt to configStore if provided
+	if req.HeartbeatPrompt != nil && s.configStore != nil {
+		if cfg, err := s.configStore.GetUserConfig(userID); err == nil {
+			cfg.Prompts.HeartbeatPrompt = *req.HeartbeatPrompt
+			_, _ = s.configStore.PutUserConfig(userID, cfg)
+		}
+	}
 	config, err := s.putHeartbeatConfig(r.Context(), userID, req)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "unable to save heartbeat config")
 		return
+	}
+	if req.HeartbeatPrompt != nil {
+		config.HeartbeatPrompt = *req.HeartbeatPrompt
 	}
 	writeJSON(w, http.StatusOK, config)
 }

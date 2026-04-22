@@ -1,0 +1,1 @@
+ALTER TABLE tool_calls DROP COLUMN IF EXISTS source;

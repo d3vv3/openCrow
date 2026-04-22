@@ -18,7 +18,18 @@ func (s *Server) toolQueueDeviceAction(ctx context.Context, userID string, args 
 	if !ok || instruction == "" {
 		return map[string]any{"success": false, "error": "instruction is required"}, nil
 	}
-	dto, err := s.createDeviceTask(ctx, userID, targetDevice, instruction)
+
+	// Optional structured tool call fields
+	var toolName *string
+	var toolArguments map[string]any
+	if tn, ok := args["tool_name"].(string); ok && tn != "" {
+		toolName = &tn
+	}
+	if ta, ok := args["tool_arguments"].(map[string]any); ok {
+		toolArguments = ta
+	}
+
+	dto, err := s.createDeviceTask(ctx, userID, targetDevice, instruction, toolName, toolArguments)
 	if err != nil {
 		return map[string]any{"success": false, "error": fmt.Sprintf("failed to queue task: %v", err)}, nil
 	}

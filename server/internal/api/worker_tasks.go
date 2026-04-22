@@ -154,7 +154,7 @@ func (s *Server) executeScheduledTask(ctx context.Context, taskID, userID, descr
 				errStr = tc.Output
 				outputStr = ""
 			}
-			if saveErr := s.saveToolCall(taskCtx, userID, conv.ID, tc.Name, tc.Arguments, outputStr, errStr, 0); saveErr != nil {
+			if saveErr := s.saveToolCall(taskCtx, userID, conv.ID, tc.Name, tc.Arguments, outputStr, errStr, 0, "builtin"); saveErr != nil {
 				s.wlog("task-worker", "[task-worker] failed to persist tool call %s for task %s conversation %s: %v", tc.Name, taskID, conv.ID, saveErr)
 			}
 		}

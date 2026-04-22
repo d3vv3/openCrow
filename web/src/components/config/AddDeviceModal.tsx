@@ -5,17 +5,15 @@ import QRCode from "react-qr-code";
 import { endpoints } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import type { UpdateConfigFn } from "./types";
+import type { UserConfig } from "@/lib/api";
 
 export function AddDeviceModal({
   serverUrl,
-  updateConfig,
-  saveFullConfig,
+  saveWithUpdate,
   onClose,
 }: {
   serverUrl: string;
-  updateConfig: UpdateConfigFn;
-  saveFullConfig: () => void;
+  saveWithUpdate: (updater: (draft: UserConfig) => UserConfig) => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState("");
@@ -39,17 +37,12 @@ export function AddDeviceModal({
           refreshToken: res.tokens.refreshToken,
         }),
       );
-      updateConfig((c) => {
+      const newDevice = { id: deviceId, name: trimName, label: trimLabel, enabled: true };
+      saveWithUpdate((c) => {
         if (!c.integrations.companionApps) c.integrations.companionApps = [];
-        c.integrations.companionApps.push({
-          id: deviceId,
-          name: trimName,
-          label: trimLabel,
-          enabled: true,
-        });
+        c.integrations.companionApps.push(newDevice);
         return c;
       });
-      saveFullConfig();
     } catch (e) {
       console.error(e);
     } finally {

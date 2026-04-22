@@ -14,7 +14,7 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
   const [isExpanded, setIsExpanded] = useState(false);
   const toggleExpand = () => setIsExpanded((v) => !v);
 
-  const toolKind = tc.kind === "MCP" ? "MCP" : "TOOL";
+  const toolKind = tc.kind === "MCP" ? "MCP" : tc.kind === "DEVICE" ? "DEVICE" : "TOOL";
 
   const args = tc.arguments ?? {};
   const primaryArgKeys = [
@@ -61,11 +61,19 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
         <div className="flex items-center gap-2 px-3 py-1.5" style={{ background: T_HEADER }}>
           <ToolIcon className="shrink-0 w-3.5 h-3.5" style={{ color: T_DIM }} />
           <span
-            className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-semibold ${toolKind === "MCP" ? "text-violet border-violet/40 bg-violet/10" : "text-cyan border-cyan/40 bg-cyan/10"}`}
+            className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-semibold ${
+              toolKind === "MCP"
+                ? "text-violet border-violet/40 bg-violet/10"
+                : toolKind === "DEVICE"
+                  ? "text-orange-400 border-orange-400/40 bg-orange-400/10"
+                  : "text-cyan border-cyan/40 bg-cyan/10"
+            }`}
           >
             [{toolKind}]
           </span>
-          <span className="text-cyan shrink-0">{tc.toolName}</span>
+          <span className={`shrink-0 ${toolKind === "DEVICE" ? "text-orange-400" : "text-cyan"}`}>
+            {tc.toolName}
+          </span>
           {primaryVal && (
             <span className="truncate flex-1" style={{ color: T_DIM }}>
               {primaryVal.slice(0, 80)}

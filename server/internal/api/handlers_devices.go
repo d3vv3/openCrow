@@ -1,8 +1,48 @@
 package api
 
 import (
+	"log"
 	"net/http"
+	"time"
+
+	"github.com/opencrow/opencrow/server/internal/configstore"
 )
+
+// localCallResult holds the outcome of a local tool call forwarded to a device.
+type localCallResult struct {
+	Output  string
+	IsError bool
+}
+
+// handleLocalToolResult is called by a device to deliver the result of a local tool call.
+// POST /v1/tool-results/{callId}
+func (s *Server) handleLocalToolResult(w http.ResponseWriter, r *http.Request) {
+	callId := r.PathValue("callId")
+	if callId == "" {
+		writeError(w, http.StatusBadRequest, "callId is required")
+		return
+	}
+
+	var req ToolResultRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	ch, ok := s.pendingLocalCalls.Load(callId)
+	if !ok {
+		writeError(w, http.StatusNotFound, "no pending call with this id")
+		return
+	}
+	resultCh := ch.(chan localCallResult)
+	select {
+	case resultCh <- localCallResult{Output: req.Output, IsError: req.IsError}:
+	case <-time.After(2 * time.Second):
+		writeError(w, http.StatusGone, "call already timed out")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
 
 // @Summary List device registrations for the current user
 // @Tags    devices
@@ -56,6 +96,29 @@ func (s *Server) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 	if err := s.upsertDeviceRegistration(r.Context(), userID, deviceID, req.Capabilities); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to register device")
 		return
+	}
+
+	// Auto-add to companionApps in user config if not already present.
+	if s.configStore != nil {
+		cfg, err := s.configStore.GetUserConfig(userID)
+		if err == nil {
+			found := false
+			for _, app := range cfg.Integrations.CompanionApps {
+				if app.ID == deviceID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				cfg.Integrations.CompanionApps = append(cfg.Integrations.CompanionApps, configstore.CompanionAppConfig{
+					ID:      deviceID,
+					Name:    deviceID,
+					Label:   deviceID,
+					Enabled: true,
+				})
+				_, _ = s.configStore.PutUserConfig(userID, cfg)
+			}
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -116,7 +179,7 @@ func (s *Server) handleCreateDeviceTask(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "targetDevice and instruction are required")
 		return
 	}
-	dto, err := s.createDeviceTask(r.Context(), userID, req.TargetDevice, req.Instruction)
+	dto, err := s.createDeviceTask(r.Context(), userID, req.TargetDevice, req.Instruction, req.ToolName, req.ToolArguments)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create task")
 		return
@@ -165,5 +228,47 @@ func (s *Server) handleDeleteDeviceTask(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "failed to delete task")
 		return
 	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleDeleteDevice removes a device registration, all its pending tasks, and
+// removes it from the user's companion app config.
+//
+// @Summary Delete a device registration
+// @Tags    devices
+// @Param   id  path  string  true  "Device ID"
+// @Success 204
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices/{id} [delete]
+func (s *Server) handleDeleteDevice(w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromContext(r.Context())
+	deviceID := r.PathValue("id")
+
+	if err := s.deleteDeviceRegistration(r.Context(), userID, deviceID); err != nil {
+		log.Printf("[devices] delete registration %s: %v", deviceID, err)
+		// not fatal -- may already be unregistered
+	}
+
+	if err := s.deleteDeviceTasksByTarget(r.Context(), userID, deviceID); err != nil {
+		log.Printf("[devices] delete tasks for %s: %v", deviceID, err)
+	}
+
+	// Remove from companion app config
+	if s.configStore != nil {
+		if cfg, err := s.configStore.GetUserConfig(userID); err == nil {
+			apps := cfg.Integrations.CompanionApps
+			filtered := apps[:0]
+			for _, a := range apps {
+				if a.ID != deviceID {
+					filtered = append(filtered, a)
+				}
+			}
+			cfg.Integrations.CompanionApps = filtered
+			if _, err := s.configStore.PutUserConfig(userID, cfg); err != nil {
+				log.Printf("[devices] failed to update config after device delete %s: %v", deviceID, err)
+			}
+		}
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }

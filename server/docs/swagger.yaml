@@ -21,6 +21,9 @@ definitions:
         type: array
       conversationId:
         type: string
+      deviceId:
+        description: requesting device, used to inject local tool specs
+        type: string
       maxRetries:
         type: integer
       message:
@@ -85,6 +88,11 @@ definitions:
       instruction:
         type: string
       targetDevice:
+        type: string
+      toolArguments:
+        additionalProperties: {}
+        type: object
+      toolName:
         type: string
     type: object
   api.CreateDeviceTokensRequest:
@@ -225,6 +233,10 @@ definitions:
         type: string
       name:
         type: string
+      parameters:
+        additionalProperties: {}
+        description: JSON Schema object for LLM function-calling
+        type: object
     type: object
   api.DeviceRegistrationDTO:
     properties:
@@ -252,6 +264,11 @@ definitions:
       status:
         type: string
       targetDevice:
+        type: string
+      toolArguments:
+        additionalProperties: {}
+        type: object
+      toolName:
         type: string
       updatedAt:
         type: string
@@ -334,6 +351,8 @@ definitions:
     properties:
       enabled:
         type: boolean
+      heartbeatPrompt:
+        type: string
       intervalSeconds:
         type: integer
       nextRunAt:
@@ -752,6 +771,8 @@ definitions:
     properties:
       enabled:
         type: boolean
+      heartbeatPrompt:
+        type: string
       intervalSeconds:
         type: integer
     type: object
@@ -1720,6 +1741,24 @@ paths:
       summary: List devices (sessions) for the current user
       tags:
       - auth
+  /v1/devices/{id}:
+    delete:
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Delete a device registration
+      tags:
+      - devices
   /v1/devices/{id}/register:
     post:
       consumes:

@@ -104,6 +104,29 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
     }
   };
 
+  // Applies an updater, saves the result immediately, and updates state --
+  // avoids the stale-closure problem when save must follow a config mutation.
+  const saveWithUpdate = useCallback(async (updater: (draft: UserConfig) => UserConfig) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const next = updater(structuredClone(prev));
+      // Fire-and-forget inside the setter -- we just need `next` synchronously
+      setSaving(true);
+      setError(null);
+      endpoints
+        .putConfig(next)
+        .then(() => {
+          setSaveStatus("Configuration saved");
+          setTimeout(() => setSaveStatus(null), 3000);
+        })
+        .catch((e: unknown) => {
+          setError(e instanceof Error ? e.message : "Save failed");
+        })
+        .finally(() => setSaving(false));
+      return next;
+    });
+  }, []);
+
   const saveTools = async () => {
     if (!config) return;
     setSaving(true);
@@ -192,6 +215,7 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
         updateConfig={updateConfig}
         saving={saving}
         saveFullConfig={saveFullConfig}
+        saveWithUpdate={saveWithUpdate}
         saveStatus={saveStatus}
       />
     ),

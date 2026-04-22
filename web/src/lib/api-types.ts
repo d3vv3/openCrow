@@ -52,7 +52,7 @@ export interface CreateMessageAttachmentRequest {
 export interface ToolCallRecord {
   id: string;
   toolName: string;
-  kind?: "TOOL" | "MCP";
+  kind?: "TOOL" | "MCP" | "DEVICE";
   arguments: Record<string, unknown>;
   output?: string;
   error?: string;

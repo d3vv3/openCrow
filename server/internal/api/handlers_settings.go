@@ -118,10 +118,39 @@ func (s *Server) handlePutUserConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Snapshot current companion app IDs before saving so we can detect removals.
+	prevAppIDs := map[string]struct{}{}
+	if prev, err := s.configStore.GetUserConfig(userID); err == nil {
+		for _, app := range prev.Integrations.CompanionApps {
+			if app.ID != "" {
+				prevAppIDs[app.ID] = struct{}{}
+			}
+		}
+	}
+
 	saved, err := s.configStore.PutUserConfig(userID, cfg)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "unable to save config")
 		return
+	}
+
+	// Cascade-delete registrations and pending tasks for removed companion apps.
+	newAppIDs := map[string]struct{}{}
+	for _, app := range saved.Integrations.CompanionApps {
+		if app.ID != "" {
+			newAppIDs[app.ID] = struct{}{}
+		}
+	}
+	for id := range prevAppIDs {
+		if _, stillPresent := newAppIDs[id]; stillPresent {
+			continue
+		}
+		if err := s.deleteDeviceRegistration(r.Context(), userID, id); err != nil {
+			log.Printf("[config] failed to delete registration for removed device %s: %v", id, err)
+		}
+		if err := s.deleteDeviceTasksByTarget(r.Context(), userID, id); err != nil {
+			log.Printf("[config] failed to delete tasks for removed device %s: %v", id, err)
+		}
 	}
 
 	// Sync email accounts to DB (reconcile: upserts present accounts, deletes removed ones)
@@ -590,8 +619,8 @@ func fetchMCPTools(ctx context.Context, serverURL string, headers map[string]str
 	var parsed struct {
 		Result struct {
 			Tools []struct {
-				Name        string `json:"name"`
-				Description string `json:"description"`
+				Name        string         `json:"name"`
+				Description string         `json:"description"`
 				InputSchema map[string]any `json:"inputSchema"`
 			} `json:"tools"`
 		} `json:"result"`

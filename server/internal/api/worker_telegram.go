@@ -309,7 +309,7 @@ func (s *Server) pollTelegramBot(ctx context.Context, userID string, bot configs
 					errStr = tc.Output
 					outputStr = ""
 				}
-				if saveErr := s.saveToolCall(ctx, userID, convID, tc.Name, tc.Arguments, outputStr, errStr, 0); saveErr != nil {
+				if saveErr := s.saveToolCall(ctx, userID, convID, tc.Name, tc.Arguments, outputStr, errStr, 0, "builtin"); saveErr != nil {
 					s.wlog("telegram-worker", "[telegram-worker] failed to persist tool call %s: %v", tc.Name, saveErr)
 				}
 			}

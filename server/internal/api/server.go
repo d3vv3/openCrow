@@ -42,6 +42,7 @@ type Server struct {
 	skillStore          *SkillStore
 	whisper             *WhisperManager
 	tgRegistered        sync.Map // set of bot tokens that have had commands registered
+	pendingLocalCalls   sync.Map // callId -> chan localCallResult
 }
 
 // WorkerStatusStore tracks runtime health of background workers.
@@ -216,6 +217,8 @@ func (s *Server) routes() {
 
 	s.mux.Handle("GET /v1/devices/registrations", s.requireAccessToken(http.HandlerFunc(s.handleListDeviceRegistrations)))
 	s.mux.Handle("POST /v1/devices/{id}/register", s.requireAccessToken(http.HandlerFunc(s.handleRegisterDevice)))
+	s.mux.Handle("DELETE /v1/devices/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteDevice)))
+	s.mux.Handle("POST /v1/tool-results/{callId}", s.requireAccessToken(http.HandlerFunc(s.handleLocalToolResult)))
 	s.mux.Handle("GET /v1/devices/tasks", s.requireAccessToken(http.HandlerFunc(s.handleListDeviceTasks)))
 	s.mux.Handle("POST /v1/devices/tasks", s.requireAccessToken(http.HandlerFunc(s.handleCreateDeviceTask)))
 	s.mux.Handle("DELETE /v1/devices/tasks/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteDeviceTask)))

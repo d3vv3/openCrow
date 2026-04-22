@@ -22,7 +22,29 @@ ON CONFLICT (user_id, device_id) DO UPDATE
 	return err
 }
 
-// listDeviceRegistrations returns a map of deviceID → registration for a user.
+// getDeviceCapabilities returns the capabilities for a specific device.
+func (s *Server) getDeviceCapabilities(ctx context.Context, userID, deviceID string) ([]DeviceCapability, error) {
+	var capRaw []byte
+	err := s.db.QueryRow(ctx, `
+SELECT capabilities FROM device_registrations
+WHERE user_id = $1 AND device_id = $2;
+`, userID, deviceID).Scan(&capRaw)
+	if err != nil {
+		return nil, err
+	}
+	var caps []DeviceCapability
+	if err := json.Unmarshal(capRaw, &caps); err != nil {
+		return nil, err
+	}
+	return caps, nil
+}
+func (s *Server) deleteDeviceRegistration(ctx context.Context, userID, deviceID string) error {
+	_, err := s.db.Exec(ctx, `
+DELETE FROM device_registrations WHERE user_id = $1 AND device_id = $2;
+`, userID, deviceID)
+	return err
+}
+
 func (s *Server) listDeviceRegistrations(ctx context.Context, userID string) (map[string]DeviceRegistrationDTO, error) {
 	rows, err := s.db.Query(ctx, `
 SELECT device_id, capabilities, last_seen_at

@@ -267,7 +267,7 @@ export function useChatSession({
           );
         },
         providerOrder,
-        (name: string, args: string, kind?: "TOOL" | "MCP") => {
+        (name: string, args: string, kind?: "TOOL" | "MCP" | "DEVICE") => {
           const liveId = `live-${Date.now()}-${Math.random()}`;
           liveToolIdsByName.set(name, liveId);
           // Add optimistic live entry

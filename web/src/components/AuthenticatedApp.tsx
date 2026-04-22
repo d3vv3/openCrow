@@ -149,9 +149,7 @@ export default function AuthenticatedApp({
   };
 
   const visibleConversations = (
-    showSystemChats
-      ? conversations
-      : conversations.filter((chat) => !chat.isAutomatic || chat.automationKind === "heartbeat")
+    showSystemChats ? conversations : conversations.filter((chat) => !chat.isAutomatic)
   ).sort((a, b) => {
     if (a.channel && !b.channel) return -1;
     if (!a.channel && b.channel) return 1;
@@ -260,9 +258,14 @@ export default function AuthenticatedApp({
                       const isActive = activeSection === "chat" && activeConversationId === chat.id;
                       const isAutomatic = !!chat.isAutomatic;
                       const isChannel = !!chat.channel;
+                      const rawTitle = chat.title || "Untitled chat";
                       const displayTitle = isChannel
                         ? chat.channel!.charAt(0).toUpperCase() + chat.channel!.slice(1)
-                        : chat.title || "Untitled chat";
+                        : rawTitle
+                            .replace(/^\[heartbeat\]\s*/i, "")
+                            .replace(/^heartbeat:\s*/i, "")
+                            .replace(/^scheduled task:\s*/i, "")
+                            .trim() || "Untitled chat";
                       return (
                         <div
                           key={chat.id}

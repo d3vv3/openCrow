@@ -105,7 +105,7 @@ func applyConversationAutomationMeta(item *ConversationDTO) {
 	case strings.HasPrefix(title, "scheduled task:"):
 		item.IsAutomatic = true
 		item.AutomationKind = "scheduled_task"
-	case strings.HasPrefix(title, "heartbeat:"):
+	case strings.HasPrefix(title, "heartbeat:"), strings.HasPrefix(title, "[heartbeat]"):
 		item.IsAutomatic = true
 		item.AutomationKind = "heartbeat"
 	case strings.HasPrefix(title, "[telegram] "):
@@ -310,7 +310,8 @@ func (s *Server) deleteToolCallsSince(ctx context.Context, userID, conversationI
 }
 
 // saveToolCall persists a tool call record for a conversation owned by userID.
-func (s *Server) saveToolCall(ctx context.Context, userID, conversationID, toolName string, arguments map[string]any, output, errStr string, durationMS int64) error {
+// source should be "builtin", "mcp", or "device".
+func (s *Server) saveToolCall(ctx context.Context, userID, conversationID, toolName string, arguments map[string]any, output, errStr string, durationMS int64, source string) error {
 	// Verify ownership
 	var exists int
 	if err := s.db.QueryRow(ctx,
@@ -324,10 +325,13 @@ func (s *Server) saveToolCall(ctx context.Context, userID, conversationID, toolN
 	if errStr != "" {
 		errPtr = &errStr
 	}
+	if source == "" {
+		source = "builtin"
+	}
 	_, err := s.db.Exec(ctx,
-		`INSERT INTO tool_calls (conversation_id, tool_name, arguments, output, error, duration_ms)
-		 VALUES ($1::uuid, $2, $3, $4, $5, $6)`,
-		conversationID, toolName, argsJSON, output, errPtr, durationMS,
+		`INSERT INTO tool_calls (conversation_id, tool_name, arguments, output, error, duration_ms, source)
+		 VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)`,
+		conversationID, toolName, argsJSON, output, errPtr, durationMS, source,
 	)
 	return err
 }
@@ -335,7 +339,8 @@ func (s *Server) saveToolCall(ctx context.Context, userID, conversationID, toolN
 // listToolCalls returns all tool calls for a conversation owned by userID.
 func (s *Server) listToolCalls(ctx context.Context, userID, conversationID string) ([]ToolCallRecord, error) {
 	const q = `
-SELECT tc.id::text, tc.tool_name, tc.arguments, tc.output, tc.error, tc.duration_ms, tc.created_at
+SELECT tc.id::text, tc.tool_name, tc.arguments, tc.output, tc.error, tc.duration_ms, tc.created_at,
+       COALESCE(tc.source, 'builtin') AS source
 FROM tool_calls tc
 JOIN conversations c ON c.id = tc.conversation_id
 WHERE tc.conversation_id = $1::uuid AND c.user_id = $2::uuid
@@ -351,14 +356,18 @@ ORDER BY tc.created_at ASC;
 		var item ToolCallRecord
 		var argsJSON []byte
 		var createdAt time.Time
-		if err := rows.Scan(&item.ID, &item.ToolName, &argsJSON, &item.Output, &item.Error, &item.DurationMS, &createdAt); err != nil {
+		var source string
+		if err := rows.Scan(&item.ID, &item.ToolName, &argsJSON, &item.Output, &item.Error, &item.DurationMS, &createdAt, &source); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal(argsJSON, &item.Arguments)
-		if isBuiltinToolName(item.ToolName) {
-			item.Kind = "TOOL"
-		} else {
+		switch source {
+		case "device":
+			item.Kind = "DEVICE"
+		case "mcp":
 			item.Kind = "MCP"
+		default:
+			item.Kind = "TOOL"
 		}
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339Nano)
 		result = append(result, item)

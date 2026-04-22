@@ -100,6 +100,7 @@ func (s *Server) executeHeartbeat(ctx context.Context, userID string, intervalSe
 		}
 	}
 	resolvedTZ := preferredTimezoneName(hbCtx, cfg, "")
+
 	prompt := buildHeartbeatExecutionPrompt(cfg, resolvedTZ)
 	s.wlog("heartbeat-worker", "[heartbeat-worker] heartbeat for user %s resolved timezone: %s", userID, resolvedTZ)
 	result, err := s.runOrchestratorForUser(hbCtx, "heartbeat-worker", userID, prompt)
@@ -163,7 +164,7 @@ func (s *Server) executeHeartbeat(ctx context.Context, userID string, intervalSe
 					errStr = tc.Output
 					outputStr = ""
 				}
-				if saveErr := s.saveToolCall(hbCtx, userID, conv.ID, tc.Name, tc.Arguments, outputStr, errStr, 0); saveErr != nil {
+				if saveErr := s.saveToolCall(hbCtx, userID, conv.ID, tc.Name, tc.Arguments, outputStr, errStr, 0, "builtin"); saveErr != nil {
 					s.wlog("heartbeat-worker", "[heartbeat-worker] failed to persist tool call %s for heartbeat conversation %s: %v", tc.Name, conv.ID, saveErr)
 				}
 			}
@@ -189,8 +190,14 @@ func buildHeartbeatExecutionPrompt(cfg *configstore.UserConfig, resolvedTZ strin
 	if cfg != nil && strings.TrimSpace(cfg.Prompts.HeartbeatPrompt) != "" {
 		base = strings.TrimSpace(cfg.Prompts.HeartbeatPrompt)
 	}
-	if strings.TrimSpace(resolvedTZ) == "" {
-		return base
+
+	var sb strings.Builder
+	if strings.TrimSpace(resolvedTZ) != "" {
+		sb.WriteString("Resolved timezone: ")
+		sb.WriteString(resolvedTZ)
+		sb.WriteString("\n\n")
 	}
-	return fmt.Sprintf("Resolved timezone: %s\n\n%s", resolvedTZ, base)
+	sb.WriteString(base)
+
+	return sb.String()
 }

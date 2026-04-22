@@ -271,6 +271,31 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Optional: remove the device registration if the client sends its device ID.
+	var req struct {
+		DeviceID string `json:"deviceId"`
+	}
+	_ = decodeJSON(r, &req)
+	if req.DeviceID != "" {
+		if err := s.deleteDeviceRegistration(ctx, userID, req.DeviceID); err != nil {
+			log.Printf("handleLogout deleteDeviceRegistration user_id=%s device_id=%s err=%v", userID, req.DeviceID, err)
+		}
+		// Also remove from companionApps in user config.
+		if s.configStore != nil {
+			cfg, err := s.configStore.GetUserConfig(userID)
+			if err == nil {
+				apps := cfg.Integrations.CompanionApps[:0]
+				for _, app := range cfg.Integrations.CompanionApps {
+					if app.ID != req.DeviceID {
+						apps = append(apps, app)
+					}
+				}
+				cfg.Integrations.CompanionApps = apps
+				_, _ = s.configStore.PutUserConfig(userID, cfg)
+			}
+		}
+	}
+
 	deleted, err := s.deleteUserSession(ctx, userID, sessionID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "unable to logout")
