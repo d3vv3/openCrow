@@ -146,8 +146,15 @@ export function useChatSession({
       // Replace message content with empty streaming placeholder
       setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, content: "" } : m)));
       if (regenerateAt != null) {
+        // Find the last user message before the target to use as the lower cutoff.
+        // Tool calls from the current turn have timestamps >= that user message and
+        // <= the assistant message, so we remove them now to avoid showing stale results.
+        const lastUserBefore = [...messages]
+          .filter((m) => m.role === "user" && new Date(m.createdAt).getTime() < regenerateAt)
+          .pop();
+        const cutoff = lastUserBefore ? new Date(lastUserBefore.createdAt).getTime() : regenerateAt;
         setToolCallHistory((prev) =>
-          prev.filter((tc) => new Date(tc.createdAt).getTime() < regenerateAt),
+          prev.filter((tc) => new Date(tc.createdAt).getTime() < cutoff),
         );
       }
       try {

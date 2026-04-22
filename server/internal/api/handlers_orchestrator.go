@@ -338,16 +338,36 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 					result = execErr.Error()
 				}
 				recordCall(tc.Name, tc.Arguments, result, execErr)
-				sendEvent("tool_result", map[string]string{
+				toolResultPayload := map[string]string{
 					"name":   tc.Name,
 					"result": truncateOutput(result, 200),
-				})
+				}
+				if execErr != nil {
+					toolResultPayload["isError"] = "true"
+				}
+				sendEvent("tool_result", toolResultPayload)
 				loopMsgs = append(loopMsgs, orchestrator.ChatMessage{
 					Role: "tool", Content: result, ToolCallID: tc.ID,
 				})
 			}
 		}
-		sendEvent("done", map[string]string{"output": fullOutput})
+		// Persist tool calls before the assistant message so their timestamps sort earlier.
+		for _, c := range capturedCalls {
+			if err := s.saveToolCall(ctx, userID, req.ConversationID, c.name, c.args, c.out, c.err, 0); err != nil {
+				log.Printf("warn: unable to save tool call %s: %v", c.name, err)
+			}
+		}
+		capturedCalls = nil // avoid double-write in deferred block below
+		savedMsg, saveErr := s.createMessage(ctx, userID, req.ConversationID, "assistant", fullOutput, nil)
+		if saveErr != nil {
+			log.Printf("warn: unable to save assistant message: %v", saveErr)
+		}
+		donePayload := map[string]any{"output": fullOutput}
+		if saveErr == nil {
+			donePayload["messageId"] = savedMsg.ID
+		}
+		sendEvent("done", donePayload)
+		return
 	} else if len(fallbackProviders) > 0 {
 		// Non-streaming fallback -- wrap executor to emit tool_call SSE events
 		baseExecutor := s.buildToolExecutor(ctx, userID)
@@ -360,7 +380,7 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 			sendEvent("tool_call", map[string]string{"name": name, "arguments": string(argsJSON), "kind": kind})
 			res, err := baseExecutor(ectx, name, args)
 			if err != nil {
-				sendEvent("tool_result", map[string]string{"name": name, "result": err.Error()})
+				sendEvent("tool_result", map[string]string{"name": name, "result": err.Error(), "isError": "true"})
 			} else {
 				sendEvent("tool_result", map[string]string{"name": name, "result": truncateOutput(res, 200)})
 			}
@@ -378,6 +398,16 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 			return
 		}
 		fullOutput = result.Output
+		// Persist tool calls before the assistant message so their timestamps sort earlier.
+		for _, c := range capturedCalls {
+			if err := s.saveToolCall(ctx, userID, req.ConversationID, c.name, c.args, c.out, c.err, 0); err != nil {
+				log.Printf("warn: unable to save tool call %s: %v", c.name, err)
+			}
+		}
+		savedMsg, saveErr := s.createMessage(ctx, userID, req.ConversationID, "assistant", fullOutput, nil)
+		if saveErr != nil {
+			log.Printf("warn: unable to save assistant message: %v", saveErr)
+		}
 		donePayload := map[string]any{"output": fullOutput}
 		if !result.Usage.IsZero() {
 			donePayload["usage"] = map[string]int{
@@ -386,21 +416,12 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 				"totalTokens":      result.Usage.TotalTokens,
 			}
 		}
+		if saveErr == nil {
+			donePayload["messageId"] = savedMsg.ID
+		}
 		sendEvent("done", donePayload)
 	} else {
 		sendEvent("error", map[string]string{"error": "no providers configured"})
-		return
-	}
-
-	// Persist captured tool calls before the assistant message so their timestamps sort earlier
-	for _, c := range capturedCalls {
-		if err := s.saveToolCall(ctx, userID, req.ConversationID, c.name, c.args, c.out, c.err, 0); err != nil {
-			log.Printf("warn: unable to save tool call %s: %v", c.name, err)
-		}
-	}
-
-	if _, err := s.createMessage(ctx, userID, req.ConversationID, "assistant", fullOutput, nil); err != nil {
-		log.Printf("warn: unable to save assistant message: %v", err)
 	}
 }
 
@@ -481,6 +502,7 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 	var chatMsgs []orchestrator.ChatMessage
 	found := false
 	var regenerateCreatedAt time.Time
+	var lastUserMsgCreatedAt time.Time
 	for _, msg := range history {
 		if msg.ID == msgID {
 			found = true
@@ -488,6 +510,11 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 				regenerateCreatedAt = parsed
 			}
 			break
+		}
+		if msg.Role == "user" {
+			if parsed, parseErr := time.Parse(time.RFC3339, msg.CreatedAt); parseErr == nil {
+				lastUserMsgCreatedAt = parsed
+			}
 		}
 		chatMsgs = append(chatMsgs, orchestrator.ChatMessage{Role: msg.Role, Content: msg.Content})
 	}
@@ -592,7 +619,11 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 					result = execErr.Error()
 				}
 				recordCall(tc.Name, tc.Arguments, result, execErr)
-				sendEvent("tool_result", map[string]string{"name": tc.Name, "result": truncateOutput(result, 200)})
+				toolResultPayload := map[string]string{"name": tc.Name, "result": truncateOutput(result, 200)}
+				if execErr != nil {
+					toolResultPayload["isError"] = "true"
+				}
+				sendEvent("tool_result", toolResultPayload)
 				loopMsgs = append(loopMsgs, orchestrator.ChatMessage{Role: "tool", Content: result, ToolCallID: tc.ID})
 			}
 		}
@@ -609,7 +640,7 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 				sendEvent("tool_call", map[string]string{"name": name, "arguments": string(argsJSON), "kind": kind})
 				res, err := s.buildToolExecutor(ctx, userID)(ectx, name, args)
 				if err != nil {
-					sendEvent("tool_result", map[string]string{"name": name, "result": err.Error()})
+					sendEvent("tool_result", map[string]string{"name": name, "result": err.Error(), "isError": "true"})
 				} else {
 					sendEvent("tool_result", map[string]string{"name": name, "result": truncateOutput(res, 200)})
 				}
@@ -627,9 +658,13 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sendEvent("done", map[string]string{"output": fullOutput})
-
-	if err := s.deleteToolCallsSince(ctx, userID, convID, regenerateCreatedAt); err != nil {
+	// Persist before sending done: once the client receives done it closes the SSE
+	// connection which cancels r.Context(). All DB writes must complete first.
+	deleteCutoff := lastUserMsgCreatedAt
+	if deleteCutoff.IsZero() {
+		deleteCutoff = regenerateCreatedAt
+	}
+	if err := s.deleteToolCallsSince(ctx, userID, convID, deleteCutoff); err != nil {
 		log.Printf("warn: unable to delete stale tool calls for conversation %s: %v", convID, err)
 	}
 	for _, c := range capturedCalls {
@@ -641,6 +676,8 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 	if err := s.updateMessageContent(ctx, userID, convID, msgID, fullOutput); err != nil {
 		log.Printf("warn: unable to update regenerated message %s: %v", msgID, err)
 	}
+
+	sendEvent("done", map[string]string{"output": fullOutput, "messageId": msgID})
 }
 
 func (s *Server) buildEnabledToolSpecs(ctx context.Context, cfg *configstore.UserConfig) []orchestrator.ToolSpec {

@@ -3,6 +3,13 @@ import { formatTime, displayValue } from "./helpers";
 import { ToolIcon } from "@/components/ui/icons";
 import type { ToolCallRecord } from "@/lib/api";
 
+// Same always-dark palette as OverviewView worker terminals
+const T_BG = "#0d0d1a";
+const T_HEADER = "#1a1a2e";
+const T_BORDER = "#2a2a3e";
+const T_DIM = "rgba(158,168,195,0.55)";
+const T_TEXT = "rgba(236,242,255,0.85)";
+
 export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const toggleExpand = () => setIsExpanded((v) => !v);
@@ -48,10 +55,11 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
     <div className="flex justify-center animate-in fade-in duration-300">
       <button
         onClick={toggleExpand}
-        className="w-full max-w-full sm:max-w-[72%] cursor-pointer text-left rounded-lg border border-white/8 bg-surface-lowest hover:border-white/15 transition-colors font-mono text-xs overflow-hidden"
+        className="w-full max-w-full sm:max-w-[72%] cursor-pointer text-left rounded-lg overflow-hidden font-mono text-xs"
+        style={{ border: `1px solid ${T_BORDER}`, background: T_BG }}
       >
-        <div className="flex items-center gap-2 px-3 py-1.5">
-          <ToolIcon className="text-on-surface-variant shrink-0 w-3.5 h-3.5" />
+        <div className="flex items-center gap-2 px-3 py-1.5" style={{ background: T_HEADER }}>
+          <ToolIcon className="shrink-0 w-3.5 h-3.5" style={{ color: T_DIM }} />
           <span
             className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-semibold ${toolKind === "MCP" ? "text-violet border-violet/40 bg-violet/10" : "text-cyan border-cyan/40 bg-cyan/10"}`}
           >
@@ -59,7 +67,9 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
           </span>
           <span className="text-cyan shrink-0">{tc.toolName}</span>
           {primaryVal && (
-            <span className="text-on-surface/60 truncate flex-1">{primaryVal.slice(0, 80)}</span>
+            <span className="truncate flex-1" style={{ color: T_DIM }}>
+              {primaryVal.slice(0, 80)}
+            </span>
           )}
           {!isLive &&
             (tc.error ? (
@@ -71,15 +81,25 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
                 ok
               </span>
             ))}
-          <span className="text-on-surface-variant shrink-0">{formatTime(tc.createdAt)}</span>
+          <span className="shrink-0" style={{ color: T_DIM }}>
+            {formatTime(tc.createdAt)}
+          </span>
           {isLive && (
-            <span className="text-on-surface-variant animate-pulse shrink-0 ml-auto">...</span>
+            <span className="animate-pulse shrink-0 ml-auto" style={{ color: T_DIM }}>
+              ...
+            </span>
           )}
-          <span className="text-on-surface-variant shrink-0 ml-1">{isExpanded ? "▲" : "▼"}</span>
+          <span className="shrink-0 ml-1" style={{ color: T_DIM }}>
+            {isExpanded ? "▲" : "▼"}
+          </span>
         </div>
 
         {isExpanded && (
-          <div className="border-t border-white/8 px-3 py-2 space-y-2">
+          <div
+            className="border-t px-3 py-2 space-y-2 cursor-text select-text"
+            style={{ borderColor: T_BORDER, background: T_HEADER }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {Object.keys(args).length > 0 && (
               <div className="space-y-1">
                 {Object.entries(args).map(([k, v]) => {
@@ -102,9 +122,12 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
                   return (
                     <div key={k}>
                       <span className="text-warning">{k}</span>
-                      <span className="text-on-surface-variant">=</span>
+                      <span style={{ color: T_DIM }}>=</span>
                       {multiline ? (
-                        <pre className="text-success whitespace-pre-wrap break-all mt-0.5 pl-2 border-l border-on-surface-variant/30">
+                        <pre
+                          className="text-success whitespace-pre-wrap break-all mt-0.5 pl-2"
+                          style={{ borderLeft: `1px solid ${T_BORDER}` }}
+                        >
                           {displayVal}
                         </pre>
                       ) : (
@@ -117,7 +140,17 @@ export function ToolItem({ tc, isLive }: { tc: ToolCallRecord; isLive: boolean }
             )}
             {stdout && (
               <pre
-                className={`whitespace-pre-wrap break-all leading-relaxed ${stdoutIsJson ? "text-on-surface/80 bg-black/20 rounded p-2" : "text-success opacity-80"}`}
+                className="whitespace-pre-wrap break-all leading-relaxed"
+                style={
+                  stdoutIsJson
+                    ? {
+                        color: T_TEXT,
+                        background: "rgba(0,0,0,0.3)",
+                        borderRadius: "4px",
+                        padding: "8px",
+                      }
+                    : { color: "#50fa7b", opacity: 0.85 }
+                }
               >
                 {stdout}
               </pre>

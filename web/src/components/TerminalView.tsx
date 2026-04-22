@@ -172,9 +172,15 @@ export default function TerminalView() {
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-64px)]">
       {/* Terminal window */}
-      <div className="flex-1 flex flex-col rounded-lg overflow-hidden border border-white/8 min-h-0">
+      <div
+        className="flex-1 flex flex-col rounded-lg overflow-hidden min-h-0"
+        style={{ border: "1px solid #2a2a3e" }}
+      >
         {/* Title bar */}
-        <div className="shrink-0 flex items-center gap-3 bg-surface-lowest px-4 py-2">
+        <div
+          className="shrink-0 flex items-center gap-3 px-4 py-2"
+          style={{ background: "#1a1a2e", borderBottom: "1px solid #2a2a3e" }}
+        >
           <div className="flex gap-1.5">
             <span className="block h-3 w-3 rounded-full bg-[#ff5f57]" />
             <span className="block h-3 w-3 rounded-full bg-[#ffbd2e]" />
@@ -205,7 +211,7 @@ export default function TerminalView() {
         </div>
 
         {/* xterm container */}
-        <div className="flex-1 bg-[#0d0d1a] min-h-0 overflow-hidden p-1">
+        <div className="flex-1 min-h-0 overflow-hidden p-1" style={{ background: "#0d0d1a" }}>
           {error && (
             <div className="text-error font-mono text-xs px-3 py-2 border-b border-white/8">
               {error}
