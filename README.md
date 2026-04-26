@@ -8,19 +8,22 @@
 
 - **Server:** Go
 - **Web UI:** Next.js
+- [**Companion App:**](https://github.com/d3vv3/openCrow-companion) Kotlin (Android)
 - **Infra:** Docker Compose (PostgreSQL + Redis)
 
 
 ## Features
 
 - **Multi-device** AI gateway
+- [**Companion app**](https://github.com/d3vv3/openCrow-companion) that acts as the best Android assistant with local tools
 - **Scheduled** and on-demand **task execution**
 - **Sandboxed tool execution** with Linux shell
 - **Configurable via LLM** and UI with server-side persistence
 - **Email integration** with inbox and send capabilities
 - Access **remote ssh servers** for command execution
-- **Telegram and Signal** integrations for chatting and notifications
+- **Telegram** integrations for chatting and notifications
 - Chat via voice with **Whisper** speech recognition
+- **Voice** output with TTS support
 - LLM provider agnostic with built-in support for OpenAI-compatible, OpenAI, OpenRouter, ...
 - Configurable heartbeat agent with custom prompt and scheduling
 
