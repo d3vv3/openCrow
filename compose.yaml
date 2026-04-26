@@ -74,7 +74,7 @@ services:
       server-state-init:
         condition: service_completed_successfully
     ports:
-      - "${API_PORT:-8080}:8080"
+      - "${API_PORT:-8080}:${API_PORT:-8080}"
     volumes:
       - server_state:/data
       - sandbox:/sandbox

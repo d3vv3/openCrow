@@ -93,7 +93,7 @@ services:
       server-state-init:
         condition: service_completed_successfully
     ports:
-      - "${API_PORT:-8080}:8080"
+      - "${API_PORT:-8080}:${API_PORT:-8080}"
     volumes:
       - server_state_dev:/data
       - sandbox_dev:/sandbox
@@ -119,7 +119,7 @@ services:
     container_name: opencrow-web-dev
     environment:
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
-      API_INTERNAL_BASE_URL: http://server:8080
+      API_INTERNAL_BASE_URL: http://server:${API_PORT:-8080}
       OPENCROW_VERSION: ${OPENCROW_VERSION:-dev}
     depends_on:
       server:
