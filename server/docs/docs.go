@@ -700,27 +700,7 @@ const docTemplate = `{
         },
         "/v1/conversations/{id}/tool-calls": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "conversations"
-                ],
                 "summary": "List tool calls for a conversation",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Conversation ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -989,6 +969,61 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Update a device task (instruction, tool args, or reset status)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateDeviceTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.DeviceTaskDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
                     },
                     "401": {
                         "description": "Unauthorized",
@@ -3295,6 +3330,95 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/voice/tts": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "server"
+                ],
+                "summary": "Synthesize speech via the Kokoro TTS sidecar",
+                "parameters": [
+                    {
+                        "description": "TTS request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "audio/mpeg stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/voice/tts/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "server"
+                ],
+                "summary": "Get TTS sidecar status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/workers/logs": {
             "get": {
                 "security": [
@@ -4498,6 +4622,25 @@ const docTemplate = `{
                 }
             }
         },
+        "api.UpdateDeviceTaskRequest": {
+            "type": "object",
+            "properties": {
+                "instruction": {
+                    "type": "string"
+                },
+                "resetStatus": {
+                    "description": "Reset a failed/completed task back to pending so it runs again",
+                    "type": "boolean"
+                },
+                "toolArguments": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "toolName": {
+                    "type": "string"
+                }
+            }
+        },
         "api.UpdateEmailInboxRequest": {
             "type": "object",
             "properties": {
@@ -5215,6 +5358,25 @@ const docTemplate = `{
                 },
                 "updatedAt": {
                     "type": "string"
+                },
+                "voice": {
+                    "$ref": "#/definitions/configstore.VoiceConfig"
+                }
+            }
+        },
+        "configstore.VoiceConfig": {
+            "type": "object",
+            "properties": {
+                "defaultVoice": {
+                    "description": "DefaultVoice is the Kokoro voice used when no per-language override matches.",
+                    "type": "string"
+                },
+                "languageVoices": {
+                    "description": "LanguageVoices maps BCP-47 language codes (e.g. \"en\", \"ja\", \"fr\") to voice IDs.\nWhen the detected language of the TTS text matches a key, the mapped voice is used.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 }
             }
         }

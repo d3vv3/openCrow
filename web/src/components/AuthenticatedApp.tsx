@@ -107,7 +107,13 @@ export default function AuthenticatedApp({
   const [conversations, setConversations] = useState<ConversationDTO[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [loadingConversations, setLoadingConversations] = useState(true);
-  const [showSystemChats, setShowSystemChats] = useState(false);
+  const [showSystemChats, setShowSystemChats] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("showSystemChats") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const initialLoadDone = useRef(false);
@@ -382,6 +388,9 @@ export default function AuthenticatedApp({
                   onClick={() => {
                     setShowSystemChats((prev) => {
                       const next = !prev;
+                      try {
+                        localStorage.setItem("showSystemChats", String(next));
+                      } catch {}
                       if (!next && activeConversationId) {
                         const active = conversations.find(
                           (chat) => chat.id === activeConversationId,

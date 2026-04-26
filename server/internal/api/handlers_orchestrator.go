@@ -228,7 +228,6 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 
 	// scheduleableDeviceTools is the set of device tool base-names that make sense
 	// to queue as async device_tasks when no device is actively connected.
-	// Ephemeral tools (flashlight, volume, brightness, ...) are intentionally excluded.
 	scheduleableDeviceTools := map[string]bool{
 		"set_alarm":             true,
 		"create_calendar_event": true,
@@ -237,9 +236,22 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 		"send_notification":     true,
 	}
 
+	// liveOnlyDeviceTools are exposed to the LLM when no device is connected, but
+	// they cannot be scheduled -- the LLM must tell the user to use the mobile app.
+	liveOnlyDeviceTools := map[string]bool{
+		"toggle_flashlight": true,
+		"set_volume":        true,
+		"set_brightness":    true,
+		"set_ringer_mode":   true,
+		"media_control":     true,
+		"open_app":          true,
+		"web_open":          true,
+	}
+
 	// Inject local tool specs registered by the requesting device
 	localToolNames := map[string]bool{}        // bare name -> true (live execution via SSE)
 	scheduleToolTargets := map[string]string{} // bare name -> target device ID (async scheduling)
+	liveOnlyToolNames := map[string]bool{}     // bare name -> true (requires live device, no scheduling)
 
 	if req.DeviceID != "" {
 		// Device is actively connected - expose all its capabilities for live execution.
@@ -255,30 +267,45 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 			}
 		}
 	} else {
-		// No active device - expose only scheduleable tools from registered devices.
-		// They will be queued as device_tasks when called by the LLM.
+		// No active device - expose scheduleable tools (queued as device_tasks) and
+		// live-only tools (shown to the LLM so it can explain they need an active connection).
 		if devRegs, err := s.listDeviceRegistrations(ctx, userID); err == nil {
 			for deviceID, reg := range devRegs {
 				for _, cap := range reg.Capabilities {
 					baseName := strings.TrimPrefix(cap.Name, "on_device_")
-					if !scheduleableDeviceTools[baseName] {
-						continue
+					if scheduleableDeviceTools[baseName] {
+						if _, already := scheduleToolTargets[baseName]; already {
+							continue // only register first device per tool
+						}
+						desc := cap.Description
+						if desc != "" {
+							desc += " (will be scheduled on your companion device)"
+						} else {
+							desc = "Will be scheduled on your companion device"
+						}
+						toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
+							Name:        baseName,
+							Description: desc,
+							Parameters:  cap.Parameters,
+						})
+						scheduleToolTargets[baseName] = deviceID
+					} else if liveOnlyDeviceTools[baseName] {
+						if liveOnlyToolNames[baseName] {
+							continue // only register once
+						}
+						desc := cap.Description
+						if desc != "" {
+							desc += " (only available when the companion app is open and actively connected)"
+						} else {
+							desc = "Only available when the companion app is open and actively connected"
+						}
+						toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
+							Name:        baseName,
+							Description: desc,
+							Parameters:  cap.Parameters,
+						})
+						liveOnlyToolNames[baseName] = true
 					}
-					if _, already := scheduleToolTargets[baseName]; already {
-						continue // only register first device per tool
-					}
-					desc := cap.Description
-					if desc != "" {
-						desc += " (will be scheduled on your companion device)"
-					} else {
-						desc = "Will be scheduled on your companion device"
-					}
-					toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
-						Name:        baseName,
-						Description: desc,
-						Parameters:  cap.Parameters,
-					})
-					scheduleToolTargets[baseName] = deviceID
 				}
 			}
 		}
@@ -383,6 +410,8 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 					kind = "TOOL"
 				} else if localToolNames[tc.Name] || scheduleToolTargets[tc.Name] != "" {
 					kind = "DEVICE"
+				} else if liveOnlyToolNames[tc.Name] {
+					kind = "DEVICE"
 				}
 				sendEvent("tool_call", map[string]string{
 					"name":      tc.Name,
@@ -430,6 +459,10 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 					} else {
 						result = fmt.Sprintf("Scheduled on your companion device (task ID: %s). The action will execute the next time your device checks in.", task.ID)
 					}
+				} else if liveOnlyToolNames[tc.Name] {
+					callSource = "device"
+					// This tool requires an active device connection -- tell the LLM so it can inform the user.
+					result = fmt.Sprintf("Cannot execute '%s': this action requires your companion device to be actively connected. Please open the openCrow app on your phone and try again from there.", tc.Name)
 				} else {
 					if !isBuiltinToolName(tc.Name) {
 						callSource = "mcp"

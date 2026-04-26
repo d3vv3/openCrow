@@ -192,3 +192,90 @@ RETURNING id;
 	}
 	return nil
 }
+
+func (s *Server) updateDeviceTask(ctx context.Context, userID, taskID string, req UpdateDeviceTaskRequest) (DeviceTaskDTO, error) {
+	var dto DeviceTaskDTO
+
+	// Build SET clause dynamically based on provided fields.
+	setClauses := []string{"updated_at = NOW()"}
+	queryArgs := []any{}
+	argIdx := 1
+
+	if req.Instruction != nil {
+		setClauses = append(setClauses, fmt.Sprintf("instruction = $%d", argIdx))
+		queryArgs = append(queryArgs, *req.Instruction)
+		argIdx++
+	}
+	if req.ToolName != nil {
+		setClauses = append(setClauses, fmt.Sprintf("tool_name = $%d", argIdx))
+		queryArgs = append(queryArgs, *req.ToolName)
+		argIdx++
+	}
+	if req.ToolArguments != nil {
+		b, err := json.Marshal(req.ToolArguments)
+		if err != nil {
+			return dto, fmt.Errorf("marshal tool arguments: %w", err)
+		}
+		setClauses = append(setClauses, fmt.Sprintf("tool_arguments = $%d", argIdx))
+		queryArgs = append(queryArgs, b)
+		argIdx++
+	}
+	if req.ResetStatus {
+		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
+		queryArgs = append(queryArgs, "pending")
+		argIdx++
+		// Clear previous result when retrying
+		setClauses = append(setClauses, fmt.Sprintf("result_output = $%d", argIdx))
+		queryArgs = append(queryArgs, nil)
+		argIdx++
+	}
+
+	// Append WHERE clause args
+	queryArgs = append(queryArgs, taskID, userID)
+	whereTaskID := argIdx
+	whereUserID := argIdx + 1
+
+	setStr := ""
+	for i, c := range setClauses {
+		if i > 0 {
+			setStr += ", "
+		}
+		setStr += c
+	}
+
+	q := fmt.Sprintf(`
+UPDATE device_tasks
+SET %s
+WHERE id = $%d AND user_id = $%d
+RETURNING id, target_device, instruction, tool_name, tool_arguments, status, result_output, created_at, updated_at, expires_at;
+`, setStr, whereTaskID, whereUserID)
+
+	var resultOutput *string
+	var createdAt, updatedAt time.Time
+	var expiresAt *time.Time
+	var rawArgs []byte
+
+	err := s.db.QueryRow(ctx, q, queryArgs...).Scan(
+		&dto.ID, &dto.TargetDevice, &dto.Instruction, &dto.ToolName, &rawArgs, &dto.Status,
+		&resultOutput, &createdAt, &updatedAt, &expiresAt,
+	)
+	if err != nil {
+		return dto, fmt.Errorf("update device task: %w", err)
+	}
+
+	dto.ResultOutput = resultOutput
+	dto.CreatedAt = createdAt.Format(time.RFC3339)
+	dto.UpdatedAt = updatedAt.Format(time.RFC3339)
+	if expiresAt != nil {
+		exp := expiresAt.Format(time.RFC3339)
+		dto.ExpiresAt = &exp
+	}
+	if rawArgs != nil {
+		var m map[string]any
+		if err := json.Unmarshal(rawArgs, &m); err == nil {
+			dto.ToolArguments = m
+		}
+	}
+
+	return dto, nil
+}

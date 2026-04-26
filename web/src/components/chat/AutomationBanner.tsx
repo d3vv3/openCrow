@@ -2,6 +2,12 @@ import { FlagIcon } from "./FlagIcon";
 import { automationLabel } from "./helpers";
 import type { ConversationDTO, MessageDTO } from "@/lib/api";
 
+const DESCRIPTIONS: Record<string, string> = {
+  heartbeat:
+    "openCrow ran a scheduled self-check on your behalf. It reviewed your calendar, pending tasks, and recent context to surface anything that needs attention.",
+  scheduled_task: "This conversation was triggered automatically by a scheduled task.",
+};
+
 export function AutomationBanner({
   conversation,
   messages,
@@ -9,10 +15,17 @@ export function AutomationBanner({
   conversation: ConversationDTO;
   messages: MessageDTO[];
 }) {
-  const prompt =
-    messages.find((m) => m.role === "user")?.content ||
-    (conversation.title ?? "").replace(/^(Scheduled task|Heartbeat|Automatic):\s*/i, "") ||
-    "No prompt";
+  const kind = conversation.automationKind ?? "";
+  const description =
+    DESCRIPTIONS[kind] ??
+    (() => {
+      // For other automations fall back to a trimmed first user message
+      const raw =
+        messages.find((m) => m.role === "user")?.content ||
+        (conversation.title ?? "").replace(/^(Scheduled task|Heartbeat|Automatic):\s*/i, "") ||
+        "";
+      return raw.slice(0, 200) + (raw.length > 200 ? "..." : "");
+    })();
 
   return (
     <div className="shrink-0 px-6 pt-5">
@@ -29,7 +42,7 @@ export function AutomationBanner({
               Auto
             </span>
           </div>
-          <p className="mt-1 text-sm text-on-surface-variant break-words w-full">{prompt}</p>
+          <p className="mt-1 text-sm text-on-surface-variant break-words w-full">{description}</p>
         </div>
       </div>
     </div>

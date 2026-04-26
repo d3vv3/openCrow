@@ -217,6 +217,41 @@ function WhisperStatusCard() {
 
 // ─── Default Channel Status ───
 
+function KokoroStatusCard() {
+  const [status, setStatus] = useState<"ok" | "down" | "loading">("loading");
+
+  useEffect(() => {
+    endpoints
+      .getTtsStatus()
+      .then((res) => setStatus(res.status))
+      .catch(() => setStatus("down"));
+  }, []);
+
+  const cardStatus: "ok" | "error" | "idle" =
+    status === "ok" ? "ok" : status === "down" ? "error" : "idle";
+
+  const dotStatus = status === "loading" ? "pending" : status === "ok" ? "ok" : "error";
+
+  return (
+    <StatusCard title="Kokoro (TTS)" status={cardStatus}>
+      <div className="flex items-center gap-3">
+        {status === "loading" ? (
+          <Spinner size="sm" />
+        ) : (
+          <AnimatedDot status={dotStatus as "ok" | "error" | "pending" | "idle"} />
+        )}
+        <span className="text-sm text-on-surface">
+          {status === "loading" && <span className="text-on-surface-variant">Checking...</span>}
+          {status === "ok" && <span className="text-on-surface-variant">ready</span>}
+          {status === "down" && (
+            <span className="text-on-surface-variant">Kokoro TTS sidecar unavailable</span>
+          )}
+        </span>
+      </div>
+    </StatusCard>
+  );
+}
+
 function DefaultChannelCard() {
   const [bot, setBot] = useState<TelegramBotConfig | null | undefined>(undefined);
   const [testResult, setTestResult] = useState<{
@@ -331,7 +366,7 @@ export default function OverviewView() {
       </div>
 
       {/* Status grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatusCard title="Backend Connection" status={backendStatus}>
           <div className="flex items-center gap-3">
             <AnimatedDot status={backendStatus === "idle" ? "idle" : backendStatus} />
@@ -350,6 +385,7 @@ export default function OverviewView() {
 
         <DefaultChannelCard />
         <WhisperStatusCard />
+        <KokoroStatusCard />
       </div>
 
       {/* Worker Terminals */}

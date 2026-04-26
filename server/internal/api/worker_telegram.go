@@ -215,7 +215,7 @@ func (s *Server) pollTelegramBot(ctx context.Context, userID string, bot configs
 					continue
 				}
 				s.wlog("telegram-worker", "[telegram-worker] voice transcription: %s", workerLogPreview(transcript, 120))
-				promptParts = append(promptParts, "🎤 "+transcript)
+				promptParts = append(promptParts, "🎙️ "+transcript)
 			}
 		}
 

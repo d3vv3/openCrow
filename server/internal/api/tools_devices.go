@@ -234,3 +234,31 @@ func (s *Server) toolListDeviceTasks(ctx context.Context, userID string, args ma
 	}
 	return map[string]any{"success": true, "tasks": tasks, "count": len(tasks)}, nil
 }
+
+func (s *Server) toolEditDeviceTask(ctx context.Context, userID string, args map[string]any) (map[string]any, error) {
+	taskID, ok := args["task_id"].(string)
+	if !ok || taskID == "" {
+		return map[string]any{"success": false, "error": "task_id is required"}, nil
+	}
+
+	var req UpdateDeviceTaskRequest
+
+	if instruction, ok := args["instruction"].(string); ok && instruction != "" {
+		req.Instruction = &instruction
+	}
+	if toolName, ok := args["tool_name"].(string); ok && toolName != "" {
+		req.ToolName = &toolName
+	}
+	if toolArgs, ok := args["tool_arguments"].(map[string]any); ok {
+		req.ToolArguments = toolArgs
+	}
+	if reset, ok := args["reset_status"].(bool); ok {
+		req.ResetStatus = reset
+	}
+
+	dto, err := s.updateDeviceTask(ctx, userID, taskID, req)
+	if err != nil {
+		return map[string]any{"success": false, "error": fmt.Sprintf("failed to update task: %v", err)}, nil
+	}
+	return map[string]any{"success": true, "task": dto}, nil
+}

@@ -169,6 +169,13 @@ var defaultTools = []ToolDefinition{
 	{ID: "list_device_tasks", Name: "list_device_tasks", Description: "List pending or recent device tasks, optionally filtered by target device ID.", Source: "builtin", Parameters: []ToolParameter{
 		{Name: "target_device", Type: "string", Description: "Filter by device ID (optional)", Required: false},
 	}},
+	{ID: "edit_device_task", Name: "edit_device_task", Description: "Edit a queued device task. Can update the instruction, tool_name, or tool_arguments. Set reset_status=true to re-queue a failed or completed task so the device picks it up again.", Source: "builtin", Parameters: []ToolParameter{
+		{Name: "task_id", Type: "string", Description: "ID of the task to edit (from list_device_tasks)", Required: true},
+		{Name: "instruction", Type: "string", Description: "New instruction text (optional)", Required: false},
+		{Name: "tool_name", Type: "string", Description: "New tool name override (optional)", Required: false},
+		{Name: "tool_arguments", Type: "object", Description: "New tool arguments map (optional)", Required: false},
+		{Name: "reset_status", Type: "boolean", Description: "Set to true to reset a failed/completed task back to pending so it runs again", Required: false},
+	}},
 	{ID: "get_device_capabilities", Name: "get_device_capabilities", Description: "Get the registered capabilities and online status of a specific companion device. Use this before queue_device_action to verify the device supports the intended action.", Source: "builtin", Parameters: []ToolParameter{
 		{Name: "id", Type: "string", Description: "Device ID", Required: true},
 	}},
@@ -250,6 +257,10 @@ func DefaultUserConfig() UserConfig {
 				TZ:    "UTC",
 			},
 			Model: "",
+		},
+		Voice: VoiceConfig{
+			DefaultVoice:   "af_heart",
+			LanguageVoices: map[string]string{},
 		},
 		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 	}

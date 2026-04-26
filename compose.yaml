@@ -65,7 +65,8 @@ services:
       CONFIG_FILE_PATH: /data/config.json
       TZ: ${TZ:-Europe/Berlin}
       WHISPER_ENDPOINT: ${WHISPER_ENDPOINT:-http://whisper:8081}
-      WHISPER_MODEL: ${WHISPER_MODEL:-ggml-base}
+      WHISPER_MODEL: ${WHISPER_MODEL:-ggml-small}
+      KOKORO_ENDPOINT: ${KOKORO_ENDPOINT:-http://kokoro:8880}
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,6 +92,15 @@ services:
     volumes:
       - whisper_models:/models
 
+  kokoro:
+    image: hwdsl2/kokoro-server
+    container_name: opencrow-kokoro
+    restart: unless-stopped
+    ports:
+      - "${KOKORO_PORT:-8880}:8880"
+    volumes:
+      - kokoro_data:/var/lib/kokoro
+
   web:
     image: ghcr.io/d3vv3/opencrow-web:${OPENCROW_VERSION:-latest}
     container_name: opencrow-web
@@ -110,3 +120,4 @@ volumes:
   server_state:
   sandbox:
   whisper_models:
+  kokoro_data:

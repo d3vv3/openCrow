@@ -26,6 +26,7 @@ import {
   SoulTab,
   MemoryTab,
   HeartbeatTab,
+  VoiceTab,
 } from "@/components/config";
 
 export default function ConfigStudio({ requestedTab }: { requestedTab?: string }) {
@@ -256,6 +257,7 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
       />
     ),
     heartbeat: () => <HeartbeatTab config={config} updateConfig={updateConfig} {...commonSave} />,
+    voice: () => <VoiceTab config={config} updateConfig={updateConfig} {...commonSave} />,
   };
 
   return (

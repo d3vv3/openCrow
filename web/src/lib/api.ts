@@ -67,12 +67,13 @@ import type {
   HeartbeatConfig,
   HeartbeatEventDTO,
   RealtimeEvent,
+  MCPToolSummary,
   MCPServerTestResult,
-  DAVConfig,
-  DAVTestResult,
   ProviderModelsProbeResult,
   UserConfig,
   ServerUserConfig,
+  DAVConfig,
+  DAVTestResult,
   ConversationsResponse,
   MessagesResponse,
   DeviceTaskDTO,
@@ -339,6 +340,10 @@ function normalizeUserConfig(raw: ServerUserConfig): UserConfig {
       activeHoursStart: heartbeat.activeHoursStart ?? heartbeat.activeHours?.start ?? "08:00",
       activeHoursEnd: heartbeat.activeHoursEnd ?? heartbeat.activeHours?.end ?? "22:00",
       timezone: heartbeat.timezone ?? heartbeat.activeHours?.tz ?? "UTC",
+    },
+    voice: {
+      defaultVoice: raw?.voice?.defaultVoice ?? "af_heart",
+      languageVoices: raw?.voice?.languageVoices ?? {},
     },
   };
 }
@@ -768,6 +773,19 @@ export const endpoints = {
   // Voice
   getVoiceStatus: () =>
     api<{ status: "ok" | "downloading" | "down"; model: string }>("/v1/voice/status"),
+  getTtsStatus: () => api<{ status: "ok" | "down" }>("/v1/voice/tts/status"),
+  synthesizeSpeech: async (text: string, voice: string): Promise<ArrayBuffer> => {
+    const token = getAccessToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${_apiBase}/v1/voice/tts`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ text, voice }),
+    });
+    if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
+    return res.arrayBuffer();
+  },
   transcribeAudio: (audioBlob: Blob) => {
     const form = new FormData();
     form.append("audio", audioBlob, "recording.webm");

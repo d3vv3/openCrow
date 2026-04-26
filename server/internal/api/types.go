@@ -345,6 +345,14 @@ type CompleteDeviceTaskRequest struct {
 	Output  string `json:"output"`
 }
 
+type UpdateDeviceTaskRequest struct {
+	Instruction   *string        `json:"instruction,omitempty"`
+	ToolName      *string        `json:"toolName,omitempty"`
+	ToolArguments map[string]any `json:"toolArguments,omitempty"`
+	// Reset a failed/completed task back to pending so it runs again
+	ResetStatus bool `json:"resetStatus,omitempty"`
+}
+
 type DeviceCapability struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description,omitempty"`
@@ -355,6 +363,17 @@ type DeviceCapability struct {
 type ToolResultRequest struct {
 	Output  string `json:"output"`
 	IsError bool   `json:"isError,omitempty"`
+}
+
+// RecordToolCallRequest is the body for POST /v1/conversations/{id}/tool-calls.
+// Used by devices to persist on-device tool executions (e.g. heartbeat tasks) into the conversation.
+type RecordToolCallRequest struct {
+	Name       string         `json:"name"`
+	Arguments  map[string]any `json:"arguments"`
+	Output     string         `json:"output"`
+	Error      string         `json:"error,omitempty"`
+	DurationMS int64          `json:"durationMs,omitempty"`
+	Source     string         `json:"source,omitempty"` // "device", "builtin", etc. defaults to "device"
 }
 
 type RegisterDeviceRequest struct {

@@ -257,6 +257,37 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Produce json
 // @Param   id path string true "Conversation ID"
+// handleRecordToolCall allows a device to persist an on-device tool execution
+// (e.g. a heartbeat local-tool task) as a tool call record in the given conversation.
+// POST /v1/conversations/{id}/tool-calls
+func (s *Server) handleRecordToolCall(w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromContext(r.Context())
+	conversationID := r.PathValue("id")
+	if !isUUID(conversationID) {
+		writeError(w, http.StatusBadRequest, "invalid conversation id")
+		return
+	}
+	var req RecordToolCallRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	source := req.Source
+	if source == "" {
+		source = "device"
+	}
+	if err := s.saveToolCall(r.Context(), userID, conversationID, req.Name, req.Arguments, req.Output, req.Error, req.DurationMS, source); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save tool call")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{"status": "ok"})
+}
+
+// @Summary List tool calls for a conversation
 // @Success 200 {object} map[string][]ToolCallRecord
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse

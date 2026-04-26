@@ -60,6 +60,7 @@ func main() {
 		StateDir:            cfg.StateDir,
 		WhisperModel:        cfg.WhisperModel,
 		WhisperEndpoint:     cfg.WhisperEndpoint,
+		KokoroEndpoint:      cfg.KokoroEndpoint,
 	})
 
 	httpServer := &http.Server{

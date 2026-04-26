@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { UserConfig, DeviceRegistration } from "@/lib/api";
 import { endpoints, getApiBase } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
@@ -39,7 +39,7 @@ export function DevicesTab({
     (r) => !configuredIds.has(r.deviceId),
   );
 
-  const loadRegistrations = () => {
+  const loadRegistrations = useCallback(() => {
     endpoints
       .listDeviceRegistrations()
       .then((res) => {
@@ -48,11 +48,14 @@ export function DevicesTab({
         setRegistrations(map);
       })
       .catch(() => {});
-  };
+  }, []);
 
   useEffect(() => {
     loadRegistrations();
-  }, []);
+    // Refresh every 30 s to keep online status and capabilities up to date
+    const id = setInterval(loadRegistrations, 30_000);
+    return () => clearInterval(id);
+  }, [loadRegistrations]);
 
   const handleRemoveOrphan = async (deviceId: string) => {
     setRemovingOrphan(deviceId);
@@ -183,6 +186,10 @@ export function DevicesTab({
           serverUrl={serverUrl}
           saveWithUpdate={saveWithUpdate}
           onClose={() => setIsAddingDevice(false)}
+          onPaired={() => {
+            // Immediately refresh registrations so the card shows capabilities
+            loadRegistrations();
+          }}
         />
       )}
     </div>

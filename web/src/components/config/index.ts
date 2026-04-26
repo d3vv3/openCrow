@@ -18,4 +18,5 @@ export { McpTab } from "./McpTab";
 export { SoulTab } from "./SoulTab";
 export { MemoryTab } from "./MemoryTab";
 export { HeartbeatTab } from "./HeartbeatTab";
+export { VoiceTab } from "./VoiceTab";
 export * from "./types";

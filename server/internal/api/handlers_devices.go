@@ -213,6 +213,37 @@ func (s *Server) handleCompleteDeviceTask(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// @Summary Update a device task (instruction, tool args, or reset status)
+// @Tags    devices
+// @Security BearerAuth
+// @Accept  json
+// @Produce json
+// @Param   id   path string                    true "Task ID"
+// @Param   body body UpdateDeviceTaskRequest   true "Fields to update"
+// @Success 200 {object} DeviceTaskDTO
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router  /v1/devices/tasks/{id} [patch]
+func (s *Server) handleUpdateDeviceTask(w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromContext(r.Context())
+	taskID := r.PathValue("id")
+	if taskID == "" {
+		writeError(w, http.StatusBadRequest, "task id is required")
+		return
+	}
+	var req UpdateDeviceTaskRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	dto, err := s.updateDeviceTask(r.Context(), userID, taskID, req)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update task")
+		return
+	}
+	writeJSON(w, http.StatusOK, dto)
+}
+
 // @Summary Delete a device task by ID
 // @Tags    devices
 // @Security BearerAuth

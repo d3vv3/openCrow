@@ -750,6 +750,19 @@ definitions:
       title:
         type: string
     type: object
+  api.UpdateDeviceTaskRequest:
+    properties:
+      instruction:
+        type: string
+      resetStatus:
+        description: Reset a failed/completed task back to pending so it runs again
+        type: boolean
+      toolArguments:
+        additionalProperties: {}
+        type: object
+      toolName:
+        type: string
+    type: object
   api.UpdateEmailInboxRequest:
     properties:
       active:
@@ -1218,6 +1231,22 @@ definitions:
         $ref: '#/definitions/configstore.ToolsConfig'
       updatedAt:
         type: string
+      voice:
+        $ref: '#/definitions/configstore.VoiceConfig'
+    type: object
+  configstore.VoiceConfig:
+    properties:
+      defaultVoice:
+        description: DefaultVoice is the Kokoro voice used when no per-language override
+          matches.
+        type: string
+      languageVoices:
+        additionalProperties:
+          type: string
+        description: |-
+          LanguageVoices maps BCP-47 language codes (e.g. "en", "ja", "fr") to voice IDs.
+          When the detected language of the TTS text matches a key, the mapped voice is used.
+        type: object
     type: object
 host: localhost:8080
 info:
@@ -1658,14 +1687,6 @@ paths:
       - conversations
   /v1/conversations/{id}/tool-calls:
     get:
-      parameters:
-      - description: Conversation ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
       responses:
         "200":
           description: OK
@@ -1683,11 +1704,7 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/api.ErrorResponse'
-      security:
-      - BearerAuth: []
       summary: List tool calls for a conversation
-      tags:
-      - conversations
   /v1/dav/test:
     post:
       consumes:
@@ -1895,6 +1912,41 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete a device task by ID
+      tags:
+      - devices
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateDeviceTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.DeviceTaskDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a device task (instruction, tool args, or reset status)
       tags:
       - devices
   /v1/devices/tasks/{id}/complete:
@@ -3270,6 +3322,61 @@ paths:
       security:
       - BearerAuth: []
       summary: Transcribe an audio file via the whisper sidecar
+      tags:
+      - server
+  /v1/voice/tts:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: TTS request
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: audio/mpeg stream
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Synthesize speech via the Kokoro TTS sidecar
+      tags:
+      - server
+  /v1/voice/tts/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get TTS sidecar status
       tags:
       - server
   /v1/workers/logs:

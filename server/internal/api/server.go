@@ -41,6 +41,7 @@ type Server struct {
 	termMgr             *TerminalSessionManager
 	skillStore          *SkillStore
 	whisper             *WhisperManager
+	kokoro              *KokoroManager
 	tgRegistered        sync.Map // set of bot tokens that have had commands registered
 	pendingLocalCalls   sync.Map // callId -> chan localCallResult
 }
@@ -140,6 +141,7 @@ type Options struct {
 	StateDir            string
 	WhisperModel        string
 	WhisperEndpoint     string
+	KokoroEndpoint      string
 }
 
 func NewServer(env string, db *pgxpool.Pool, authMgr *auth.Manager, cfgStore *configstore.Store, opts Options) *Server {
@@ -168,6 +170,7 @@ func NewServer(env string, db *pgxpool.Pool, authMgr *auth.Manager, cfgStore *co
 		termMgr:             NewTerminalSessionManager(),
 		skillStore:          NewSkillStore(opts.StateDir),
 		whisper:             NewWhisperManager(opts.WhisperEndpoint, opts.WhisperModel),
+		kokoro:              NewKokoroManager(opts.KokoroEndpoint),
 	}
 
 	s.routes()
@@ -222,6 +225,7 @@ func (s *Server) routes() {
 	s.mux.Handle("GET /v1/devices/tasks", s.requireAccessToken(http.HandlerFunc(s.handleListDeviceTasks)))
 	s.mux.Handle("POST /v1/devices/tasks", s.requireAccessToken(http.HandlerFunc(s.handleCreateDeviceTask)))
 	s.mux.Handle("DELETE /v1/devices/tasks/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteDeviceTask)))
+	s.mux.Handle("PATCH /v1/devices/tasks/{id}", s.requireAccessToken(http.HandlerFunc(s.handleUpdateDeviceTask)))
 	s.mux.Handle("POST /v1/devices/tasks/{id}/complete", s.requireAccessToken(http.HandlerFunc(s.handleCompleteDeviceTask)))
 
 	s.mux.Handle("GET /v1/email/inboxes", s.requireAccessToken(http.HandlerFunc(s.handleListEmailInboxes)))
@@ -263,6 +267,7 @@ func (s *Server) registerConversationRoutes() {
 	s.mux.Handle("GET /v1/conversations/{id}/messages", s.requireAccessToken(http.HandlerFunc(s.handleListMessages)))
 	s.mux.Handle("POST /v1/conversations/{id}/messages", s.requireAccessToken(http.HandlerFunc(s.handleCreateMessage)))
 	s.mux.Handle("GET /v1/conversations/{id}/tool-calls", s.requireAccessToken(http.HandlerFunc(s.handleListToolCalls)))
+	s.mux.Handle("POST /v1/conversations/{id}/tool-calls", s.requireAccessToken(http.HandlerFunc(s.handleRecordToolCall)))
 	s.mux.Handle("POST /v1/conversations/{id}/messages/{msgId}/regenerate", s.requireAccessToken(http.HandlerFunc(s.handleRegenerateMessage)))
 }
 
@@ -341,4 +346,6 @@ func (s *Server) registerSkillFileRoutes() {
 func (s *Server) registerVoiceRoutes() {
 	s.mux.Handle("GET /v1/voice/status", s.requireAccessToken(http.HandlerFunc(s.handleVoiceStatus)))
 	s.mux.Handle("POST /v1/voice/transcribe", s.requireAccessToken(http.HandlerFunc(s.handleVoiceTranscribe)))
+	s.mux.Handle("POST /v1/voice/tts", s.requireAccessToken(http.HandlerFunc(s.handleVoiceTts)))
+	s.mux.Handle("GET /v1/voice/tts/status", s.requireAccessToken(http.HandlerFunc(s.handleVoiceTtsStatus)))
 }

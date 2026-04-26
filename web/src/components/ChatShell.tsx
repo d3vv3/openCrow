@@ -105,8 +105,16 @@ export default function ChatShell({
                 type TimelineItem =
                   | { kind: "message"; item: MessageDTO; idx: number }
                   | { kind: "tool"; item: ToolCallRecord; idx: number };
+                // For automatic conversations the banner already explains the context;
+                // suppress the raw first user message (the prompt) to avoid showing it twice.
+                const firstUserMsgId = activeConversationAutomatic
+                  ? messages.find((m) => m.role === "user")?.id
+                  : undefined;
+
                 const timeline: TimelineItem[] = [
-                  ...messages.map((m, idx) => ({ kind: "message" as const, item: m, idx })),
+                  ...messages
+                    .filter((m) => m.id !== firstUserMsgId)
+                    .map((m, idx) => ({ kind: "message" as const, item: m, idx })),
                   ...toolCallHistory.map((t, idx) => ({ kind: "tool" as const, item: t, idx })),
                 ].sort((a, b) => {
                   // Live tool calls always appear before the streaming assistant message

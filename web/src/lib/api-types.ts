@@ -275,6 +275,11 @@ export interface HeartbeatConfig {
   timezone: string;
 }
 
+export interface VoiceConfig {
+  defaultVoice: string;
+  languageVoices: Record<string, string>;
+}
+
 export interface MCPServerConfig {
   id?: string;
   name: string;
@@ -397,6 +402,7 @@ export interface UserConfig {
   memory: { entries: MemoryEntry[] };
   schedules: { entries: ScheduleEntry[] };
   heartbeat: HeartbeatConfig;
+  voice: VoiceConfig;
 }
 
 // ─── Internal server shape (for normalization) ───
@@ -433,6 +439,10 @@ export interface ServerUserConfig {
     activeHoursStart?: string;
     activeHoursEnd?: string;
     timezone?: string;
+  };
+  voice?: {
+    defaultVoice?: string;
+    languageVoices?: Record<string, string>;
   };
 }
 

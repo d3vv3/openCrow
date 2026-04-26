@@ -25,6 +25,7 @@ type Config struct {
 	ConfigFilePath  string
 	WhisperModel    string
 	WhisperEndpoint string
+	KokoroEndpoint  string
 
 	AdminUsername       string
 	AdminPasswordBcrypt string
@@ -60,6 +61,7 @@ func LoadConfig() (Config, error) {
 		StateDir:            getEnv("STATE_DIR", "/data"),
 		WhisperModel:        getEnv("WHISPER_MODEL", "ggml-base"),
 		WhisperEndpoint:     os.Getenv("WHISPER_ENDPOINT"),
+		KokoroEndpoint:      os.Getenv("KOKORO_ENDPOINT"),
 		AdminUsername:       strings.TrimSpace(os.Getenv("ADMIN_USERNAME")),
 		AdminPasswordBcrypt: strings.TrimSpace(os.Getenv("ADMIN_PASSWORD_BCRYPT")),
 		ServerShellTimeout:  shellTimeout,

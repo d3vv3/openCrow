@@ -55,11 +55,22 @@ export function useChatSession({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const skipNextMsgLoad = useRef(false);
   const conversationsRef = useRef<ConversationDTO[]>([]);
+  // Refs for polling guards -- avoid stale-closure issues in intervals
+  const sendingRef = useRef(false);
+  const streamingRef = useRef(false);
 
   // Keep ref in sync so handleSend can build the updated list without stale closure
   useEffect(() => {
     conversationsRef.current = conversations;
   }, [conversations]);
+
+  // Keep polling guard refs in sync
+  useEffect(() => {
+    sendingRef.current = sending;
+  }, [sending]);
+  useEffect(() => {
+    streamingRef.current = streamingMsgId !== null;
+  }, [streamingMsgId]);
 
   // ─── Load conversations on mount ───
   useEffect(() => {
@@ -114,6 +125,49 @@ export function useChatSession({
       })
       .catch(() => {});
   }, []);
+
+  // ─── Poll conversation list every 5 s (skip while streaming / sending) ───
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (sendingRef.current || streamingRef.current) return;
+      endpoints
+        .listConversations()
+        .then((data) => {
+          const incoming = data ?? [];
+          setConversations((prev) => {
+            // Merge: keep order of incoming (server is source of truth for list),
+            // but don't clobber if incoming is somehow empty while we have messages.
+            if (incoming.length === 0 && prev.length > 0) return prev;
+            return incoming;
+          });
+          onConversationsUpdate(incoming);
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(id);
+  }, [onConversationsUpdate]);
+
+  // ─── Poll active conversation messages every 5 s (skip while streaming / sending) ───
+  const activeConversationIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const convId = activeConversationIdRef.current;
+      if (!convId || sendingRef.current || streamingRef.current) return;
+      Promise.all([endpoints.getMessages(convId), endpoints.getToolCalls(convId)])
+        .then(([msgs, calls]) => {
+          // Only apply if the active conversation hasn't changed while we were fetching
+          if (activeConversationIdRef.current !== convId) return;
+          setMessages(msgs ?? []);
+          setToolCallHistory(calls ?? []);
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(id);
+  }, []); // intentionally empty -- uses refs
 
   // ─── Auto-scroll ───
   // Instant when switching conversations, smooth for new messages arriving

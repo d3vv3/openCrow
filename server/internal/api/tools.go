@@ -69,7 +69,7 @@ func isBuiltinToolName(name string) bool {
 		"list_tasks", "schedule_task", "cancel_task",
 		"configure_heartbeat", "trigger_heartbeat", "queue_device_action",
 		"list_devices", "create_device", "delete_device", "edit_device",
-		"list_device_tasks", "get_device_capabilities",
+		"list_device_tasks", "edit_device_task", "get_device_capabilities",
 		"setup_email", "remove_email", "check_email", "read_email", "reply_email", "compose_email", "search_email",
 		"send_notification", "setup_telegram_bot",
 		"setup_dav", "list_dav_integrations", "test_dav_connection", "list_webdav_files",
@@ -160,6 +160,9 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 
 	case "list_device_tasks":
 		return s.toolListDeviceTasks(ctx, userID, args)
+
+	case "edit_device_task":
+		return s.toolEditDeviceTask(ctx, userID, args)
 
 	case "get_device_capabilities":
 		return s.toolGetDeviceCapabilities(ctx, userID, args)

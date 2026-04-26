@@ -33,6 +33,7 @@ export const TABS = [
   { key: "memory", label: "Memory" },
   { key: "schedules", label: "Schedules" },
   { key: "heartbeat", label: "Heartbeat" },
+  { key: "voice", label: "Voice" },
 ] as const;
 
 export const PROVIDER_KINDS = [

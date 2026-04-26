@@ -22,7 +22,17 @@ type UserConfig struct {
 	Memory       MemoryConfig       `json:"memory"`
 	Schedules    ScheduleConfig     `json:"schedules"`
 	Heartbeat    HeartbeatConfig    `json:"heartbeat"`
+	Voice        VoiceConfig        `json:"voice"`
 	UpdatedAt    string             `json:"updatedAt"`
+}
+
+// VoiceConfig holds TTS preferences for the user.
+type VoiceConfig struct {
+	// DefaultVoice is the Kokoro voice used when no per-language override matches.
+	DefaultVoice string `json:"defaultVoice"`
+	// LanguageVoices maps BCP-47 language codes (e.g. "en", "ja", "fr") to voice IDs.
+	// When the detected language of the TTS text matches a key, the mapped voice is used.
+	LanguageVoices map[string]string `json:"languageVoices,omitempty"`
 }
 
 type SkillsConfig struct {
@@ -38,12 +48,12 @@ type SkillEntry struct {
 }
 
 type IntegrationsConfig struct {
-	EmailAccounts            []EmailAccountConfig  `json:"emailAccounts"`
-	TelegramBots             []TelegramBotConfig   `json:"telegramBots"`
-	SSHServers               []SSHServerConfig     `json:"sshServers"`
-	DAV                      []DAVConfig           `json:"dav"`
-	CompanionApps            []CompanionAppConfig  `json:"companionApps"`
-	DefaultNotificationBotID string                `json:"defaultNotificationBotId,omitempty"`
+	EmailAccounts            []EmailAccountConfig `json:"emailAccounts"`
+	TelegramBots             []TelegramBotConfig  `json:"telegramBots"`
+	SSHServers               []SSHServerConfig    `json:"sshServers"`
+	DAV                      []DAVConfig          `json:"dav"`
+	CompanionApps            []CompanionAppConfig `json:"companionApps"`
+	DefaultNotificationBotID string               `json:"defaultNotificationBotId,omitempty"`
 }
 
 type DAVConfig struct {
@@ -192,15 +202,15 @@ type MCPServerConfig struct {
 }
 
 type EmailAccountConfig struct {
-	ID           string `json:"id"`
-	Label        string `json:"label"`
-	Address      string `json:"address"`
-	ImapHost     string `json:"imapHost"`
-	ImapPort     int    `json:"imapPort"`
-	ImapUsername string `json:"imapUsername"`
-	ImapPassword string `json:"imapPassword"`
-	SmtpHost     string `json:"smtpHost"`
-	SmtpPort     int    `json:"smtpPort"`
+	ID                  string `json:"id"`
+	Label               string `json:"label"`
+	Address             string `json:"address"`
+	ImapHost            string `json:"imapHost"`
+	ImapPort            int    `json:"imapPort"`
+	ImapUsername        string `json:"imapUsername"`
+	ImapPassword        string `json:"imapPassword"`
+	SmtpHost            string `json:"smtpHost"`
+	SmtpPort            int    `json:"smtpPort"`
 	UseTLS              bool   `json:"useTls"`
 	Enabled             bool   `json:"enabled"`
 	PollIntervalSeconds int    `json:"pollIntervalSeconds"`

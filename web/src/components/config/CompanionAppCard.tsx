@@ -9,6 +9,21 @@ import { Button } from "@/components/ui/Button";
 import type { UpdateConfigFn } from "./types";
 import { DeviceQRModal } from "./DeviceQRModal";
 
+function useIsOnline(lastSeenAt?: string) {
+  const [isOnline, setIsOnline] = useState(false);
+  useEffect(() => {
+    const check = () =>
+      setIsOnline(
+        lastSeenAt ? Date.now() - new Date(lastSeenAt).getTime() < 10 * 60 * 1000 : false,
+      );
+    check();
+    // Re-evaluate every 30s so the badge flips without a page reload
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [lastSeenAt]);
+  return isOnline;
+}
+
 export function CompanionAppCard({
   app,
   index: i,
@@ -25,15 +40,7 @@ export function CompanionAppCard({
   const [generating, setGenerating] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(false);
-
-  useEffect(() => {
-    setIsOnline(
-      registration
-        ? Date.now() - new Date(registration.lastSeenAt).getTime() < 10 * 60 * 1000
-        : false,
-    );
-  }, [registration]);
+  const isOnline = useIsOnline(registration?.lastSeenAt);
 
   const handleRemove = async () => {
     setRemoving(true);
