@@ -67,7 +67,6 @@ import type {
   HeartbeatConfig,
   HeartbeatEventDTO,
   RealtimeEvent,
-  MCPToolSummary,
   MCPServerTestResult,
   ProviderModelsProbeResult,
   UserConfig,

@@ -14,7 +14,6 @@ type Config struct {
 	APIPort string
 
 	DatabaseURL string
-	RedisAddr   string
 
 	JWTIssuer     string
 	JWTSecret     string
@@ -53,7 +52,6 @@ func LoadConfig() (Config, error) {
 		APIHost:             getEnv("API_HOST", "0.0.0.0"),
 		APIPort:             getEnv("API_PORT", "8080"),
 		DatabaseURL:         os.Getenv("DATABASE_URL"),
-		RedisAddr:           getEnv("REDIS_ADDR", "redis:6379"),
 		JWTIssuer:           getEnv("JWT_ISSUER", "openCrow"),
 		JWTSecret:           os.Getenv("JWT_SECRET"),
 		JWTAccessTTL:        accessTTL,

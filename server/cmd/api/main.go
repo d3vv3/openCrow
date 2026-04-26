@@ -39,14 +39,6 @@ func main() {
 	}
 	defer db.Close()
 
-	redisClient, err := storage.NewRedisClient(ctx, cfg.RedisAddr)
-	if err != nil {
-		log.Fatalf("init redis: %v", err)
-	}
-	defer redisClient.Close()
-
-	_ = redisClient
-
 	authMgr := auth.NewManager(cfg.JWTIssuer, cfg.JWTSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)
 	cfgStore, err := configstore.New(cfg.ConfigFilePath)
 	if err != nil {

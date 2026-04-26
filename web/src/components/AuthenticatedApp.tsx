@@ -390,7 +390,9 @@ export default function AuthenticatedApp({
                       const next = !prev;
                       try {
                         localStorage.setItem("showSystemChats", String(next));
-                      } catch {}
+                      } catch (_e) {
+                        /* localStorage unavailable */
+                      }
                       if (!next && activeConversationId) {
                         const active = conversations.find(
                           (chat) => chat.id === activeConversationId,
