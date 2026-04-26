@@ -348,4 +348,5 @@ func (s *Server) registerVoiceRoutes() {
 	s.mux.Handle("POST /v1/voice/transcribe", s.requireAccessToken(http.HandlerFunc(s.handleVoiceTranscribe)))
 	s.mux.Handle("POST /v1/voice/tts", s.requireAccessToken(http.HandlerFunc(s.handleVoiceTts)))
 	s.mux.Handle("GET /v1/voice/tts/status", s.requireAccessToken(http.HandlerFunc(s.handleVoiceTtsStatus)))
+	s.mux.Handle("GET /v1/voice/tts/voices", s.requireAccessToken(http.HandlerFunc(s.handleVoiceTtsVoices)))
 }

@@ -4,31 +4,80 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"sync"
 	"unicode"
+
+	"github.com/pemistahl/lingua-go"
 )
 
-// detectLanguage performs a best-effort script/language detection based on the
-// Unicode blocks present in the text. It returns a BCP-47 language code or an
-// empty string when the language cannot be determined confidently.
+// linguaDetector is a lazily-initialised detector covering the languages
+// that Kokoro-FastAPI supports.
+var (
+	linguaOnce     sync.Once
+	linguaDetector lingua.LanguageDetector
+)
+
+func getLinguaDetector() lingua.LanguageDetector {
+	linguaOnce.Do(func() {
+		linguaDetector = lingua.NewLanguageDetectorBuilder().
+			FromLanguages(
+				lingua.English,
+				lingua.Spanish,
+				lingua.French,
+				lingua.German,
+				lingua.Italian,
+				lingua.Portuguese,
+				lingua.Hindi,
+				lingua.Japanese,
+				lingua.Chinese,
+				lingua.Korean,
+				lingua.Arabic,
+				lingua.Russian,
+			).
+			Build()
+	})
+	return linguaDetector
+}
+
+// linguaToTag maps lingua Language values to BCP-47 codes used in VoiceConfig.
+var linguaToTag = map[lingua.Language]string{
+	lingua.English:    "en",
+	lingua.Spanish:    "es",
+	lingua.French:     "fr",
+	lingua.German:     "de",
+	lingua.Italian:    "it",
+	lingua.Portuguese: "pt",
+	lingua.Hindi:      "hi",
+	lingua.Japanese:   "ja",
+	lingua.Chinese:    "zh",
+	lingua.Korean:     "ko",
+	lingua.Arabic:     "ar",
+	lingua.Russian:    "ru",
+}
+
+// detectLanguage performs language detection on the given text.
+// For non-Latin scripts the Unicode fast-path is used; for Latin-script text
+// lingua is used so that Spanish/French/Italian/Portuguese/German etc. are
+// distinguished from English.
 func detectLanguage(text string) string {
 	var (
-		cjk, hiragana, katakana, hangul, arabic, cyrillic, latin, devanagari int
+		cjk, hiragana, katakana, hangul, arabic, cyrillic, devanagari, latin int
 	)
 	for _, r := range text {
 		switch {
-		case r >= 0x4E00 && r <= 0x9FFF: // CJK Unified Ideographs
+		case r >= 0x4E00 && r <= 0x9FFF:
 			cjk++
-		case r >= 0x3040 && r <= 0x309F: // Hiragana
+		case r >= 0x3040 && r <= 0x309F:
 			hiragana++
-		case r >= 0x30A0 && r <= 0x30FF: // Katakana
+		case r >= 0x30A0 && r <= 0x30FF:
 			katakana++
-		case r >= 0xAC00 && r <= 0xD7AF: // Hangul Syllables
+		case r >= 0xAC00 && r <= 0xD7AF:
 			hangul++
-		case r >= 0x0600 && r <= 0x06FF: // Arabic
+		case r >= 0x0600 && r <= 0x06FF:
 			arabic++
-		case r >= 0x0400 && r <= 0x04FF: // Cyrillic
+		case r >= 0x0400 && r <= 0x04FF:
 			cyrillic++
-		case r >= 0x0900 && r <= 0x097F: // Devanagari (Hindi etc.)
+		case r >= 0x0900 && r <= 0x097F:
 			devanagari++
 		case unicode.Is(unicode.Latin, r) && unicode.IsLetter(r):
 			latin++
@@ -40,11 +89,10 @@ func detectLanguage(text string) string {
 		return ""
 	}
 
-	// Japanese: hiragana/katakana present, or mix of CJK + Japanese scripts
+	// Fast-path: unambiguous non-Latin scripts.
 	if hiragana > 0 || katakana > 0 {
 		return "ja"
 	}
-	// Chinese: CJK dominant without Japanese kana
 	if cjk*100/total > 30 {
 		return "zh"
 	}
@@ -60,28 +108,60 @@ func detectLanguage(text string) string {
 	if devanagari*100/total > 30 {
 		return "hi"
 	}
+
+	// Latin-script text: use lingua for proper per-language detection.
 	if latin*100/total > 50 {
-		return "en"
+		det := getLinguaDetector()
+		if lang, ok := det.DetectLanguageOf(text); ok {
+			if tag, found := linguaToTag[lang]; found {
+				return tag
+			}
+		}
+		return "en" // fallback for unrecognised Latin
 	}
 	return ""
 }
 
+// builtinLangVoice maps BCP-47 language codes to the best Kokoro-FastAPI voice
+// for that language. Used as a fallback when the user has not configured a
+// per-language override.
+var builtinLangVoice = map[string]string{
+	"es": "ef_dora",     // Spanish female
+	"fr": "ff_siwis",    // French female
+	"it": "if_sara",     // Italian female
+	"pt": "pf_dora",     // Portuguese female
+	"de": "af_heart",    // No native German voice; use English default
+	"hi": "hf_alpha",    // Hindi female
+	"ja": "jf_alpha",    // Japanese female
+	"zh": "zf_xiaoxiao", // Chinese female
+	"ko": "af_heart",    // No native Korean voice; use English default
+	"ar": "af_heart",    // No native Arabic voice; use English default
+	"ru": "af_heart",    // No native Russian voice; use English default
+	"en": "",            // Let default voice handle English
+}
+
 // voiceForText selects a Kokoro voice for the given text using the user's VoiceConfig.
-// It detects the language of the text, looks it up in LanguageVoices, and falls back
-// to DefaultVoice when no mapping exists.
+// Priority: explicit request voice > user lang override > builtin lang default > user default > hardcoded fallback.
 func voiceForText(text, requestVoice string, defaultVoice string, langVoices map[string]string) string {
 	// Explicit voice in request always wins.
 	if requestVoice != "" {
 		return requestVoice
 	}
-	if len(langVoices) > 0 {
-		lang := detectLanguage(text)
-		if lang != "" {
-			if v, ok := langVoices[lang]; ok && v != "" {
-				return v
-			}
+
+	lang := detectLanguage(text)
+
+	// User-configured per-language override.
+	if lang != "" {
+		if v, ok := langVoices[lang]; ok && v != "" {
+			return v
+		}
+		// Built-in language default (so Spanish/French/etc. get a native voice
+		// even without manual configuration).
+		if v, ok := builtinLangVoice[lang]; ok && v != "" {
+			return v
 		}
 	}
+
 	if defaultVoice != "" {
 		return defaultVoice
 	}
@@ -184,6 +264,27 @@ func (s *Server) handleVoiceTtsStatus(w http.ResponseWriter, _ *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": status}) //nolint:errcheck
+}
+
+// handleVoiceTtsVoices returns the list of available TTS voices from the Kokoro sidecar.
+// GET /v1/voice/tts/voices
+// Response: { "voices": ["af_heart", ...] }
+func (s *Server) handleVoiceTtsVoices(w http.ResponseWriter, r *http.Request) {
+	if s.kokoro == nil || !s.kokoro.IsConfigured() {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "TTS not configured"}) //nolint:errcheck
+		return
+	}
+	voices, err := s.kokoro.ListVoices(r.Context())
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}) //nolint:errcheck
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]string{"voices": voices}) //nolint:errcheck
 }
 
 // @Summary Synthesize speech via the Kokoro TTS sidecar

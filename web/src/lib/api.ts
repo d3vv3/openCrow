@@ -774,6 +774,7 @@ export const endpoints = {
   getVoiceStatus: () =>
     api<{ status: "ok" | "downloading" | "down"; model: string }>("/v1/voice/status"),
   getTtsStatus: () => api<{ status: "ok" | "down" }>("/v1/voice/tts/status"),
+  listTtsVoices: () => api<{ voices: string[] }>("/v1/voice/tts/voices"),
   synthesizeSpeech: async (text: string, voice: string): Promise<ArrayBuffer> => {
     const token = getAccessToken();
     const headers: Record<string, string> = { "Content-Type": "application/json" };

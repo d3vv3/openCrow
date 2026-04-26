@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { UserConfig } from "@/lib/api";
 import { endpoints } from "@/lib/api";
 import { Select } from "@/components/ui/Select";
@@ -10,35 +10,140 @@ import { TextArea } from "@/components/ui/TextArea";
 import type { UpdateConfigFn } from "./types";
 import { SaveBar } from "./SaveBar";
 
-// All known Kokoro voice IDs with human-friendly labels.
-const KOKORO_VOICES = [
-  { value: "af_heart", label: "(af_heart) - American Female · Warm" },
-  { value: "af_bella", label: "(af_bella) - American Female · Bella" },
-  { value: "af_nova", label: "(af_nova) - American Female · Nova" },
-  { value: "af_sky", label: "(af_sky) - American Female · Sky" },
-  { value: "af_sarah", label: "(af_sarah) - American Female · Sarah" },
-  { value: "af_nicole", label: "(af_nicole) - American Female · Nicole" },
-  { value: "af_alloy", label: "(af_alloy) - American Female · Alloy" },
-  { value: "af_jessica", label: "(af_jessica) - American Female · Jessica" },
-  { value: "af_river", label: "(af_river) - American Female · River" },
-  { value: "am_adam", label: "(am_adam) - American Male · Adam" },
-  { value: "am_michael", label: "(am_michael) - American Male · Michael" },
-  { value: "am_echo", label: "(am_echo) - American Male · Echo" },
-  { value: "am_eric", label: "(am_eric) - American Male · Eric" },
-  { value: "am_fenrir", label: "(am_fenrir) - American Male · Fenrir" },
-  { value: "am_liam", label: "(am_liam) - American Male · Liam" },
-  { value: "am_onyx", label: "(am_onyx) - American Male · Onyx" },
-  { value: "am_puck", label: "(am_puck) - American Male · Puck" },
-  { value: "am_santa", label: "(am_santa) - American Male · Santa" },
-  { value: "bf_emma", label: "(bf_emma) - British Female · Emma" },
-  { value: "bf_isabella", label: "(bf_isabella) - British Female · Isabella" },
-  { value: "bf_alice", label: "(bf_alice) - British Female · Alice" },
-  { value: "bf_lily", label: "(bf_lily) - British Female · Lily" },
-  { value: "bm_george", label: "(bm_george) - British Male · George" },
-  { value: "bm_lewis", label: "(bm_lewis) - British Male · Lewis" },
-  { value: "bm_daniel", label: "(bm_daniel) - British Male · Daniel" },
-  { value: "bm_fable", label: "(bm_fable) - British Male · Fable" },
+// Fallback voice list - used when the server is unreachable.
+// Prefixes: a=American, b=British, e=Spanish, f=French, h=Hindi,
+//           i=Italian, j=Japanese, p=Portuguese, z=Chinese . f/m = female/male
+const KOKORO_VOICES_FALLBACK = [
+  // ── American Female ──
+  { value: "af_alloy", label: "(af_alloy) - American Female . Alloy" },
+  { value: "af_aoede", label: "(af_aoede) - American Female . Aoede" },
+  { value: "af_bella", label: "(af_bella) - American Female . Bella" },
+  { value: "af_heart", label: "(af_heart) - American Female . Heart" },
+  { value: "af_jadzia", label: "(af_jadzia) - American Female . Jadzia" },
+  { value: "af_jessica", label: "(af_jessica) - American Female . Jessica" },
+  { value: "af_kore", label: "(af_kore) - American Female . Kore" },
+  { value: "af_nicole", label: "(af_nicole) - American Female . Nicole" },
+  { value: "af_nova", label: "(af_nova) - American Female . Nova" },
+  { value: "af_river", label: "(af_river) - American Female . River" },
+  { value: "af_sarah", label: "(af_sarah) - American Female . Sarah" },
+  { value: "af_sky", label: "(af_sky) - American Female . Sky" },
+  // ── American Male ──
+  { value: "am_adam", label: "(am_adam) - American Male . Adam" },
+  { value: "am_echo", label: "(am_echo) - American Male . Echo" },
+  { value: "am_eric", label: "(am_eric) - American Male . Eric" },
+  { value: "am_fenrir", label: "(am_fenrir) - American Male . Fenrir" },
+  { value: "am_liam", label: "(am_liam) - American Male . Liam" },
+  { value: "am_michael", label: "(am_michael) - American Male . Michael" },
+  { value: "am_onyx", label: "(am_onyx) - American Male . Onyx" },
+  { value: "am_puck", label: "(am_puck) - American Male . Puck" },
+  { value: "am_santa", label: "(am_santa) - American Male . Santa" },
+  // ── British Female ──
+  { value: "bf_alice", label: "(bf_alice) - British Female . Alice" },
+  { value: "bf_emma", label: "(bf_emma) - British Female . Emma" },
+  { value: "bf_lily", label: "(bf_lily) - British Female . Lily" },
+  // ── British Male ──
+  { value: "bm_daniel", label: "(bm_daniel) - British Male . Daniel" },
+  { value: "bm_fable", label: "(bm_fable) - British Male . Fable" },
+  { value: "bm_george", label: "(bm_george) - British Male . George" },
+  { value: "bm_lewis", label: "(bm_lewis) - British Male . Lewis" },
+  // ── Spanish (ES) ──
+  { value: "ef_dora", label: "(ef_dora) - Spanish Female . Dora" },
+  { value: "em_alex", label: "(em_alex) - Spanish Male . Alex" },
+  { value: "em_santa", label: "(em_santa) - Spanish Male . Santa" },
+  // ── French ──
+  { value: "ff_siwis", label: "(ff_siwis) - French Female . Siwis" },
+  // ── Hindi ──
+  { value: "hf_alpha", label: "(hf_alpha) - Hindi Female . Alpha" },
+  { value: "hf_beta", label: "(hf_beta) - Hindi Female . Beta" },
+  { value: "hm_omega", label: "(hm_omega) - Hindi Male . Omega" },
+  { value: "hm_psi", label: "(hm_psi) - Hindi Male . Psi" },
+  // ── Italian ──
+  { value: "if_sara", label: "(if_sara) - Italian Female . Sara" },
+  { value: "im_nicola", label: "(im_nicola) - Italian Male . Nicola" },
+  // ── Japanese ──
+  { value: "jf_alpha", label: "(jf_alpha) - Japanese Female . Alpha" },
+  { value: "jf_gongitsune", label: "(jf_gongitsune) - Japanese Female . Gongitsune" },
+  { value: "jf_nezumi", label: "(jf_nezumi) - Japanese Female . Nezumi" },
+  { value: "jf_tebukuro", label: "(jf_tebukuro) - Japanese Female . Tebukuro" },
+  { value: "jm_kumo", label: "(jm_kumo) - Japanese Male . Kumo" },
+  // ── Portuguese ──
+  { value: "pf_dora", label: "(pf_dora) - Portuguese Female . Dora" },
+  { value: "pm_alex", label: "(pm_alex) - Portuguese Male . Alex" },
+  { value: "pm_santa", label: "(pm_santa) - Portuguese Male . Santa" },
+  // ── Chinese ──
+  { value: "zf_xiaobei", label: "(zf_xiaobei) - Chinese Female . Xiaobei" },
+  { value: "zf_xiaoni", label: "(zf_xiaoni) - Chinese Female . Xiaoni" },
+  { value: "zf_xiaoxiao", label: "(zf_xiaoxiao) - Chinese Female . Xiaoxiao" },
+  { value: "zf_xiaoyi", label: "(zf_xiaoyi) - Chinese Female . Xiaoyi" },
+  { value: "zm_yunjian", label: "(zm_yunjian) - Chinese Male . Yunjian" },
+  { value: "zm_yunxia", label: "(zm_yunxia) - Chinese Male . Yunxia" },
+  { value: "zm_yunxi", label: "(zm_yunxi) - Chinese Male . Yunxi" },
+  { value: "zm_yunyang", label: "(zm_yunyang) - Chinese Male . Yunyang" },
 ];
+
+// Derive a human-friendly label from a raw voice ID (e.g. "af_heart").
+function labelFromId(id: string): string {
+  const prefixMap: Record<string, string> = {
+    af: "American Female",
+    am: "American Male",
+    bf: "British Female",
+    bm: "British Male",
+    ef: "Spanish Female",
+    em: "Spanish Male",
+    ff: "French Female",
+    hf: "Hindi Female",
+    hm: "Hindi Male",
+    if: "Italian Female",
+    im: "Italian Male",
+    jf: "Japanese Female",
+    jm: "Japanese Male",
+    pf: "Portuguese Female",
+    pm: "Portuguese Male",
+    zf: "Chinese Female",
+    zm: "Chinese Male",
+  };
+  const [prefix, ...rest] = id.split("_");
+  const group = prefixMap[prefix] ?? prefix;
+  const name = rest.join("_");
+  const formatted = name.charAt(0).toUpperCase() + name.slice(1);
+  return `(${id}) - ${group} . ${formatted}`;
+}
+
+// Convert a plain voice ID string to a Select option.
+function voiceOption(id: string) {
+  // Try to find a nicer label from the fallback list first.
+  const found = KOKORO_VOICES_FALLBACK.find((v) => v.value === id);
+  return found ?? { value: id, label: labelFromId(id) };
+}
+
+// Hook: fetch voices from the server, fall back to the static list.
+function useVoices() {
+  const [voices, setVoices] = useState<{ value: string; label: string }[]>(KOKORO_VOICES_FALLBACK);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    endpoints
+      .listTtsVoices()
+      .then((data) => {
+        if (cancelled) return;
+        if (data.voices && data.voices.length > 0) {
+          setVoices(data.voices.map(voiceOption));
+        }
+      })
+      .catch(() => {
+        /* keep fallback */
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { voices, loading };
+}
 
 const DEFAULT_PHRASE = "Hey there! I'm your personal assistant. How can I help you today?";
 
@@ -58,14 +163,20 @@ const LANGUAGE_OPTIONS = [
   { code: "it", label: "Italian" },
 ];
 
-const VOICE_OPTIONS_WITH_DEFAULT = [
+const VOICE_OPTIONS_WITH_DEFAULT = (voices: { value: string; label: string }[]) => [
   { value: "", label: "-- same as default --" },
-  ...KOKORO_VOICES,
+  ...voices,
 ];
 
 // ─── Voice Tester ────────────────────────────────────────────────────────────
 
-function VoiceTester({ defaultVoice }: { defaultVoice: string }) {
+function VoiceTester({
+  defaultVoice,
+  voices,
+}: {
+  defaultVoice: string;
+  voices: { value: string; label: string }[];
+}) {
   const [voice, setVoice] = useState(defaultVoice);
   const [phrase, setPhrase] = useState(DEFAULT_PHRASE);
   const [playing, setPlaying] = useState(false);
@@ -116,7 +227,7 @@ function VoiceTester({ defaultVoice }: { defaultVoice: string }) {
         <Select
           label="Voice to preview"
           value={voice}
-          options={KOKORO_VOICES}
+          options={voices}
           onChange={(e) => setVoice(e.target.value)}
         />
 
@@ -173,6 +284,7 @@ export function VoiceTab({
   saveStatus: string | null;
 }) {
   const [newLang, setNewLang] = useState("");
+  const { voices, loading } = useVoices();
 
   const langVoices = config.voice?.languageVoices ?? {};
   const defaultVoice = config.voice?.defaultVoice ?? "af_heart";
@@ -237,13 +349,13 @@ export function VoiceTab({
         <Select
           label="Default voice"
           value={defaultVoice}
-          options={KOKORO_VOICES}
+          options={loading ? [{ value: defaultVoice, label: "Loading voices..." }] : voices}
           onChange={(e) => setDefaultVoice(e.target.value)}
         />
       </Card>
 
       {/* Voice tester */}
-      <VoiceTester defaultVoice={defaultVoice} />
+      <VoiceTester defaultVoice={defaultVoice} voices={voices} />
 
       {/* Per-language overrides */}
       <Card title="Per-Language Voice Overrides">
@@ -272,7 +384,7 @@ export function VoiceTab({
                   <Select
                     label="Voice"
                     value={langVoices[code] ?? ""}
-                    options={VOICE_OPTIONS_WITH_DEFAULT}
+                    options={VOICE_OPTIONS_WITH_DEFAULT(voices)}
                     onChange={(e) => setLangVoice(code, e.target.value)}
                   />
                 </div>

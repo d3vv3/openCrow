@@ -34,7 +34,7 @@ func (k *KokoroManager) IsConfigured() bool {
 	return k.endpoint != ""
 }
 
-// IsReady pings the Kokoro health endpoint and returns true when the sidecar
+// IsReady pings the Kokoro voices endpoint and returns true when the sidecar
 // responds with HTTP 200.
 func (k *KokoroManager) IsReady() bool {
 	if k.endpoint == "" {
@@ -42,7 +42,7 @@ func (k *KokoroManager) IsReady() bool {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, k.endpoint+"/health", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, k.endpoint+"/v1/audio/voices", nil)
 	if err != nil {
 		return false
 	}
@@ -63,6 +63,33 @@ type kokoroSpeechRequest struct {
 	Stream         bool   `json:"stream"`
 }
 
+// ListVoices fetches the available voices from the Kokoro sidecar and returns
+// their IDs. Returns an empty slice when the sidecar is unavailable.
+func (k *KokoroManager) ListVoices(ctx context.Context) ([]string, error) {
+	if k.endpoint == "" {
+		return nil, fmt.Errorf("kokoro not configured")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, k.endpoint+"/v1/audio/voices", nil)
+	if err != nil {
+		return nil, fmt.Errorf("kokoro: build request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("kokoro: request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("kokoro: status %d", resp.StatusCode)
+	}
+	var result struct {
+		Voices []string `json:"voices"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("kokoro: decode response: %w", err)
+	}
+	return result.Voices, nil
+}
+
 // Synthesize sends text to the Kokoro sidecar and returns a streaming reader
 // of the mp3 audio, plus the content-type reported by the sidecar.
 // The caller is responsible for closing the returned ReadCloser.
@@ -75,7 +102,7 @@ func (k *KokoroManager) Synthesize(ctx context.Context, text, voice string) (io.
 	}
 
 	body, err := json.Marshal(kokoroSpeechRequest{
-		Model:          "tts-1",
+		Model:          "kokoro",
 		Input:          text,
 		Voice:          voice,
 		ResponseFormat: "mp3",
