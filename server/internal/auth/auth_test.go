@@ -3,6 +3,8 @@ package auth
 import (
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func TestNewTokenPairAndParse(t *testing.T) {
@@ -94,5 +96,41 @@ func TestParseGarbage(t *testing.T) {
 	_, err := mgr.Parse("not.a.token", "access")
 	if err == nil {
 		t.Error("expected error for garbage token")
+	}
+}
+
+// TestParseAlgNone verifies that a token crafted with alg=none is rejected.
+func TestParseAlgNone(t *testing.T) {
+	mgr := NewManager("iss", "super-secret-key!!", 15*time.Minute, 720*time.Hour)
+
+	// Build a token manually using jwt.UnsafeAllowNoneSignatureType
+	claims := &Claims{
+		UserID:    "attacker",
+		SessionID: "evil-session",
+		Type:      "access",
+	}
+	claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Hour))
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
+	tokenString, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	if err != nil {
+		t.Fatalf("could not craft none-alg token: %v", err)
+	}
+
+	_, err = mgr.Parse(tokenString, "access")
+	if err == nil {
+		t.Fatal("Parse must reject alg=none token")
+	}
+}
+
+// TestParseAlgHS256IsAccepted verifies that a correctly signed HS256 token is still accepted.
+func TestParseAlgHS256IsAccepted(t *testing.T) {
+	mgr := NewManager("iss", "super-secret-key!!", 15*time.Minute, 720*time.Hour)
+	pair, err := mgr.NewTokenPair("user1", "sess1")
+	if err != nil {
+		t.Fatalf("NewTokenPair: %v", err)
+	}
+	_, err = mgr.Parse(pair.AccessToken, "access")
+	if err != nil {
+		t.Fatalf("Parse rejected valid HS256 token: %v", err)
 	}
 }
