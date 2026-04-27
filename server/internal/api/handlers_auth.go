@@ -53,6 +53,10 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	deviceLabel := chooseDeviceLabel(req.Device, r.Header.Get("X-Device-Label"))
 	tokens, err := s.createSessionAndTokens(ctx, user.ID, deviceLabel)
 	if err != nil {
+		if strings.Contains(err.Error(), "session limit reached") {
+			writeError(w, http.StatusTooManyRequests, "maximum number of sessions reached")
+			return
+		}
 		log.Printf("login createSessionAndTokens failed user_id=%s device_label=%q err=%v", user.ID, deviceLabel, err)
 		writeError(w, http.StatusInternalServerError, "unable to create session")
 		return

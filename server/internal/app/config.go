@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -29,6 +30,14 @@ type Config struct {
 	AdminUsername       string
 	AdminPasswordBcrypt string
 	ServerShellTimeout  time.Duration
+
+	// CORSAllowedOrigins is a comma-separated list of allowed origins.
+	// Use "*" to allow all origins (development only).
+	CORSAllowedOrigins string
+
+	// MaxSessionsPerUser caps the number of concurrent device sessions per user.
+	// 0 means unlimited (not recommended for internet-facing deployments).
+	MaxSessionsPerUser int
 }
 
 func LoadConfig() (Config, error) {
@@ -47,6 +56,13 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("invalid SERVER_SHELL_TIMEOUT: %w", err)
 	}
 
+	maxSessions := 0
+	if v := strings.TrimSpace(os.Getenv("MAX_SESSIONS_PER_USER")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			maxSessions = n
+		}
+	}
+
 	cfg := Config{
 		Env:                 getEnv("APP_ENV", "development"),
 		APIHost:             getEnv("API_HOST", "0.0.0.0"),
@@ -63,6 +79,8 @@ func LoadConfig() (Config, error) {
 		AdminUsername:       strings.TrimSpace(os.Getenv("ADMIN_USERNAME")),
 		AdminPasswordBcrypt: strings.TrimSpace(os.Getenv("ADMIN_PASSWORD_BCRYPT")),
 		ServerShellTimeout:  shellTimeout,
+		CORSAllowedOrigins:  getEnv("CORS_ALLOWED_ORIGINS", "*"),
+		MaxSessionsPerUser:  maxSessions,
 	}
 	cfg.ConfigFilePath = getEnv("CONFIG_FILE_PATH", cfg.StateDir+"/config.json")
 

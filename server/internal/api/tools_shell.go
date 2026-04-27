@@ -94,7 +94,7 @@ func (s *Server) toolRemoteExecute(ctx context.Context, userID string, args map[
 	workingDir, _ := args["working_dir"].(string)
 	background, _ := args["background"].(bool)
 
-	sshCfg, err := buildSSHClientConfig(srv.Username, srv.AuthMode, srv.SSHKey, srv.Password, srv.Passphrase)
+	sshCfg, err := buildSSHClientConfig(srv.Username, srv.AuthMode, srv.SSHKey, srv.Password, srv.Passphrase, srv.KnownHostKey)
 	if err != nil {
 		return map[string]any{"success": false, "error": err.Error()}, nil
 	}

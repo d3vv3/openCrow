@@ -59,6 +59,13 @@ func (m *Manager) NewTokenPair(userID, sessionID string) (TokenPair, error) {
 
 func (m *Manager) Parse(tokenString, expectedType string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		// Explicitly reject any algorithm other than HS256 to prevent alg-confusion attacks.
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidToken
+		}
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, ErrInvalidToken
+		}
 		return m.secret, nil
 	})
 	if err != nil {

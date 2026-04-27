@@ -175,7 +175,11 @@ type SSHServerConfig struct {
 	SSHKey     string `json:"sshKey,omitempty"`
 	Password   string `json:"password,omitempty"`
 	Passphrase string `json:"passphrase,omitempty"`
-	Enabled    bool   `json:"enabled"`
+	// KnownHostKey is the base64-encoded public key fingerprint (e.g. "ssh-ed25519 AAAA...")
+	// used to verify the remote host. When empty, the connection proceeds without
+	// host-key verification (insecure; logs a warning).
+	KnownHostKey string `json:"knownHostKey,omitempty"`
+	Enabled      bool   `json:"enabled"`
 }
 
 type TelegramBotConfig struct {

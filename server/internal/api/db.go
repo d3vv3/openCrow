@@ -35,6 +35,18 @@ func (s *Server) findUserByID(ctx context.Context, id string) (UserDTO, string, 
 }
 
 func (s *Server) createSessionAndTokens(ctx context.Context, userID, deviceLabel string) (auth.TokenPair, error) {
+	// Enforce per-user session limit if configured.
+	if s.maxSessionsPerUser > 0 {
+		const countQ = `SELECT COUNT(*) FROM device_sessions WHERE user_id = $1::uuid;`
+		var count int
+		if err := s.db.QueryRow(ctx, countQ, userID).Scan(&count); err != nil {
+			return auth.TokenPair{}, fmt.Errorf("count sessions: %w", err)
+		}
+		if count >= s.maxSessionsPerUser {
+			return auth.TokenPair{}, fmt.Errorf("session limit reached (%d)", s.maxSessionsPerUser)
+		}
+	}
+
 	const q = `
 INSERT INTO device_sessions (user_id, device_label, refresh_token_hash)
 VALUES ($1::uuid, $2, '')

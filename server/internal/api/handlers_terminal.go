@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -16,10 +17,42 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var wsUpgrader = websocket.Upgrader{
-	CheckOrigin:     func(r *http.Request) bool { return true },
-	ReadBufferSize:  4096,
-	WriteBufferSize: 4096,
+// wsUpgraderWrapper wraps a websocket.Upgrader with origin checking against
+// the server's configured allowed origins.
+type wsUpgraderWrapper struct {
+	upgrader *websocket.Upgrader
+}
+
+// newWSUpgrader creates a WebSocket upgrader that enforces the allowed origins list.
+// If allowedOrigins contains "*", all origins are permitted.
+func newWSUpgrader(allowedOrigins []string) *wsUpgraderWrapper {
+	allowAll := len(allowedOrigins) == 1 && allowedOrigins[0] == "*"
+	return &wsUpgraderWrapper{
+		upgrader: &websocket.Upgrader{
+			ReadBufferSize:  4096,
+			WriteBufferSize: 4096,
+			CheckOrigin: func(r *http.Request) bool {
+				if allowAll {
+					return true
+				}
+				origin := strings.TrimSpace(r.Header.Get("Origin"))
+				if origin == "" {
+					// No Origin header - allow (e.g. same-origin requests from some clients)
+					return true
+				}
+				for _, o := range allowedOrigins {
+					if strings.EqualFold(o, origin) {
+						return true
+					}
+				}
+				return false
+			},
+		},
+	}
+}
+
+func (w *wsUpgraderWrapper) Upgrade(rw http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error) {
+	return w.upgrader.Upgrade(rw, r, responseHeader)
 }
 
 // resolveShell returns the best available interactive shell on this system.
@@ -204,7 +237,7 @@ func (s *Server) handleTerminalWS(w http.ResponseWriter, r *http.Request) {
 	// Shell is fixed.
 	shell := resolveShell()
 
-	conn, err := wsUpgrader.Upgrade(w, r, nil)
+	conn, err := s.wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("terminal ws upgrade error: %v", err)
 		return
@@ -252,10 +285,16 @@ func setTermSize(f *os.File, cols, rows uint16) {
 }
 
 // minimal io.Reader over a []byte
-type bytesReader struct{ data []byte; pos int }
+type bytesReader struct {
+	data []byte
+	pos  int
+}
+
 func newBytesReader(b []byte) *bytesReader { return &bytesReader{data: b} }
 func (r *bytesReader) Read(p []byte) (int, error) {
-	if r.pos >= len(r.data) { return 0, io.EOF }
+	if r.pos >= len(r.data) {
+		return 0, io.EOF
+	}
 	n := copy(p, r.data[r.pos:])
 	r.pos += n
 	return n, nil

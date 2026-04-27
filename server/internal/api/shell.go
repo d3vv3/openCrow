@@ -75,7 +75,7 @@ func executeShellCommand(ctx context.Context, shell, command string, timeout tim
 	defer cancel()
 
 	if workingDir != "" {
-		command = fmt.Sprintf("cd %s 2>/dev/null; %s", workingDir, command)
+		command = fmt.Sprintf("cd %s 2>/dev/null; %s", shellescape(workingDir), command)
 	}
 	cmd := exec.CommandContext(execCtx, "chroot", sandboxRoot, shell, "-c", command)
 
@@ -174,7 +174,7 @@ func (pm *ProcessManager) StartBackground(ctx context.Context, shell, command st
 	cmd := exec.Command("chroot", sandboxRoot, shell, "-c", command)
 	if workingDir != "" {
 		// Prepend cd into the chroot command
-		cmd = exec.Command("chroot", sandboxRoot, shell, "-c", fmt.Sprintf("cd %s 2>/dev/null; %s", workingDir, command))
+		cmd = exec.Command("chroot", sandboxRoot, shell, "-c", fmt.Sprintf("cd %s 2>/dev/null; %s", shellescape(workingDir), command))
 	}
 	if len(env) > 0 {
 		for k, v := range env {

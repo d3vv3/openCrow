@@ -2,6 +2,7 @@ package api
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"encoding/xml"
 	"errors"
@@ -342,11 +343,11 @@ func (s *Server) handleEmailAutoconfig(w http.ResponseWriter, r *http.Request) {
 		Source       string `json:"source,omitempty"`
 	}
 
-	if res, src := fetchThunderbirdAutoconfig(domain, email); res != nil {
+	if res, src := fetchThunderbirdAutoconfig(r.Context(), domain, email); res != nil {
 		writeJSON(w, http.StatusOK, result{
 			ImapHost: res.imapHost, ImapPort: res.imapPort,
 			ImapUsername: res.imapUsername,
-			SmtpHost: res.smtpHost, SmtpPort: res.smtpPort,
+			SmtpHost:     res.smtpHost, SmtpPort: res.smtpPort,
 			UseTLS: res.useTLS, Source: src,
 		})
 		return
@@ -364,7 +365,7 @@ type autoconfigResult struct {
 	useTLS       bool
 }
 
-func fetchThunderbirdAutoconfig(domain, email string) (*autoconfigResult, string) {
+func fetchThunderbirdAutoconfig(ctx context.Context, domain, email string) (*autoconfigResult, string) {
 	type attempt struct {
 		url    string
 		source string
@@ -377,7 +378,7 @@ func fetchThunderbirdAutoconfig(domain, email string) (*autoconfigResult, string
 		{"https://autoconfig.thunderbird.net/v1.1/" + domain, "ispdb"},
 	}
 
-	// Resolve CNAME on autoconfig.{domain} — if it points to another domain,
+	// Resolve CNAME on autoconfig.{domain} -- if it points to another domain,
 	// also try the ISPDB for that provider's domain.
 	if cname, err := net.LookupCNAME("autoconfig." + domain); err == nil {
 		cname = strings.TrimSuffix(strings.ToLower(cname), ".")
@@ -396,6 +397,10 @@ func fetchThunderbirdAutoconfig(domain, email string) (*autoconfigResult, string
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	for _, u := range urls {
+		// SSRF guard: skip URLs that resolve to private/loopback addresses.
+		if err := checkSSRF(ctx, u.url); err != nil {
+			continue
+		}
 		resp, err := client.Get(u.url)
 		if err != nil {
 			continue

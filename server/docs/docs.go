@@ -4505,6 +4505,9 @@ const docTemplate = `{
                 "host": {
                     "type": "string"
                 },
+                "knownHostKey": {
+                    "type": "string"
+                },
                 "passphrase": {
                     "type": "string"
                 },
@@ -5135,6 +5138,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "knownHostKey": {
+                    "description": "KnownHostKey is the base64-encoded public key fingerprint (e.g. \"ssh-ed25519 AAAA...\")\nused to verify the remote host. When empty, the connection proceeds without\nhost-key verification (insecure; logs a warning).",
                     "type": "string"
                 },
                 "name": {

@@ -72,6 +72,8 @@ services:
       WHISPER_ENDPOINT: ${WHISPER_ENDPOINT:-http://whisper:8081}
       WHISPER_MODEL: ${WHISPER_MODEL:-ggml-small}
       KOKORO_ENDPOINT: ${KOKORO_ENDPOINT:-http://kokoro:8880}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+      MAX_SESSIONS_PER_USER: ${MAX_SESSIONS_PER_USER:-1}
     depends_on:
       postgres:
         condition: service_healthy

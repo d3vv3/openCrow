@@ -44,6 +44,19 @@ type Server struct {
 	kokoro              *KokoroManager
 	tgRegistered        sync.Map // set of bot tokens that have had commands registered
 	pendingLocalCalls   sync.Map // callId -> chan localCallResult
+
+	// corsOrigins is the parsed list of allowed CORS/WebSocket origins.
+	// Contains "*" if all origins are permitted.
+	corsOrigins []string
+
+	// maxSessionsPerUser caps parallel device sessions. 0 = unlimited.
+	maxSessionsPerUser int
+
+	// authRateLimiter throttles the login and refresh endpoints.
+	authRateLimiter *ipRateLimiter
+
+	// wsUpgrader is used for WebSocket upgrades with origin validation.
+	wsUpgrader *wsUpgraderWrapper
 }
 
 // WorkerStatusStore tracks runtime health of background workers.
@@ -142,12 +155,19 @@ type Options struct {
 	WhisperModel        string
 	WhisperEndpoint     string
 	KokoroEndpoint      string
+	// CORSAllowedOrigins is a comma-separated list of allowed origins, or "*".
+	CORSAllowedOrigins string
+	// MaxSessionsPerUser caps parallel device sessions per user. 0 = unlimited.
+	MaxSessionsPerUser int
 }
 
 func NewServer(env string, db *pgxpool.Pool, authMgr *auth.Manager, cfgStore *configstore.Store, opts Options) *Server {
 	if opts.ServerShellTimeout <= 0 {
 		opts.ServerShellTimeout = 300 * time.Second
 	}
+
+	// Parse allowed origins
+	corsOrigins := parseCORSOrigins(opts.CORSAllowedOrigins)
 
 	s := &Server{
 		env:     env,
@@ -171,27 +191,82 @@ func NewServer(env string, db *pgxpool.Pool, authMgr *auth.Manager, cfgStore *co
 		skillStore:          NewSkillStore(opts.StateDir),
 		whisper:             NewWhisperManager(opts.WhisperEndpoint, opts.WhisperModel),
 		kokoro:              NewKokoroManager(opts.KokoroEndpoint),
+		corsOrigins:         corsOrigins,
+		maxSessionsPerUser:  opts.MaxSessionsPerUser,
+		// Allow 5 auth attempts per minute per IP (burst of 10)
+		authRateLimiter: newIPRateLimiter(5.0/60.0, 10),
+		wsUpgrader:      newWSUpgrader(corsOrigins),
 	}
 
 	s.routes()
 	return s
 }
 
+// parseCORSOrigins splits a comma-separated origins string into a slice.
+// Returns []string{"*"} if the input is empty or "*".
+func parseCORSOrigins(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "*" {
+		return []string{"*"}
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if o := strings.TrimSpace(p); o != "" {
+			out = append(out, o)
+		}
+	}
+	if len(out) == 0 {
+		return []string{"*"}
+	}
+	return out
+}
+
 func (s *Server) Handler() http.Handler {
-	return s.mux
+	return withCORS(s.corsOrigins, s.mux)
+}
+
+// withCORS adds CORS headers. When allowedOrigins contains "*", all origins
+// are permitted. Otherwise only listed origins receive the Access-Control-Allow-Origin header.
+func withCORS(allowedOrigins []string, next http.Handler) http.Handler {
+	allowAll := len(allowedOrigins) == 1 && allowedOrigins[0] == "*"
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if allowAll {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		} else if origin != "" {
+			for _, o := range allowedOrigins {
+				if strings.EqualFold(o, origin) {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					w.Header().Add("Vary", "Origin")
+					break
+				}
+			}
+		}
+		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization,Content-Type,Accept,X-Client-Timezone")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 
-	// Swagger UI
-	s.mux.HandleFunc("GET /docs/", httpSwagger.Handler(
+	// Swagger UI -- protected behind access token
+	s.mux.Handle("GET /docs/", s.requireAccessToken(httpSwagger.Handler(
 		httpSwagger.URL("/docs/doc.json"),
-	))
+	)))
 	// Alias for openapi.json
-	s.mux.HandleFunc("GET /openapi.json", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.Handle("GET /openapi.json", s.requireAccessToken(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/doc.json", http.StatusMovedPermanently)
-	})
+	})))
 
 	s.registerAuthRoutes()
 	s.registerSessionRoutes()
@@ -246,8 +321,8 @@ func (s *Server) routes() {
 }
 
 func (s *Server) registerAuthRoutes() {
-	s.mux.HandleFunc("POST /v1/auth/login", s.handleLogin)
-	s.mux.HandleFunc("POST /v1/auth/refresh", s.handleRefresh)
+	s.mux.Handle("POST /v1/auth/login", s.authRateLimiter.middleware(http.HandlerFunc(s.handleLogin)))
+	s.mux.Handle("POST /v1/auth/refresh", s.authRateLimiter.middleware(http.HandlerFunc(s.handleRefresh)))
 	s.mux.Handle("POST /v1/auth/logout", s.requireAccessToken(http.HandlerFunc(s.handleLogout)))
 	s.mux.Handle("POST /v1/auth/device-tokens", s.requireAccessToken(http.HandlerFunc(s.handleCreateDeviceTokens)))
 }

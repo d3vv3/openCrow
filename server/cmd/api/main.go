@@ -53,11 +53,13 @@ func main() {
 		WhisperModel:        cfg.WhisperModel,
 		WhisperEndpoint:     cfg.WhisperEndpoint,
 		KokoroEndpoint:      cfg.KokoroEndpoint,
+		CORSAllowedOrigins:  cfg.CORSAllowedOrigins,
+		MaxSessionsPerUser:  cfg.MaxSessionsPerUser,
 	})
 
 	httpServer := &http.Server{
 		Addr:              cfg.Addr(),
-		Handler:           withCORS(server.Handler()),
+		Handler:           server.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

@@ -132,6 +132,10 @@ func (s *Server) toolOpenURL(ctx context.Context, args map[string]any) (map[stri
 		return map[string]any{"success": false, "error": "url is required"}, nil
 	}
 
+	if err := checkSSRF(ctx, rawURL); err != nil {
+		return map[string]any{"success": false, "error": "URL not allowed: " + err.Error()}, nil
+	}
+
 	// Fetch page content and return it (server-side, we fetch instead of opening browser)
 	req, err := http.NewRequestWithContext(ctx, "GET", rawURL, nil)
 	if err != nil {
