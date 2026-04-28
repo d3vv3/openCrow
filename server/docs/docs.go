@@ -3850,6 +3850,9 @@ const docTemplate = `{
                 },
                 "lastSeenAt": {
                     "type": "string"
+                },
+                "pushEndpoint": {
+                    "type": "string"
                 }
             }
         },
@@ -4308,6 +4311,12 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/api.DeviceCapability"
                     }
+                },
+                "pushAuth": {
+                    "type": "string"
+                },
+                "pushEndpoint": {
+                    "type": "string"
                 }
             }
         },
@@ -4833,6 +4842,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "pushEndpoint": {
                     "type": "string"
                 }
             }

@@ -137,6 +137,7 @@ export interface DeviceRegistration {
   deviceId: string;
   capabilities: DeviceCapability[];
   lastSeenAt: string;
+  pushEndpoint?: string;
 }
 
 export interface CompanionAppConfig {
@@ -144,6 +145,7 @@ export interface CompanionAppConfig {
   name: string;
   label?: string;
   enabled: boolean;
+  pushEndpoint?: string;
 }
 
 export interface EmailAccountConfig {

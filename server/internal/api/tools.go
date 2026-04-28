@@ -21,6 +21,11 @@ func (s *Server) buildToolExecutor(parentCtx context.Context, userID string) fun
 				execCtx = context.WithValue(execCtx, clientTimezoneContextKey, parentTZ)
 			}
 		}
+		if execCtx.Value(conversationIDContextKey) == nil {
+			if parentConvID, _ := parentCtx.Value(conversationIDContextKey).(string); parentConvID != "" {
+				execCtx = context.WithValue(execCtx, conversationIDContextKey, parentConvID)
+			}
+		}
 		result, err := s.executeTool(execCtx, userID, name, args)
 		execErr := err
 		if execErr == nil {
@@ -71,7 +76,7 @@ func isBuiltinToolName(name string) bool {
 		"list_devices", "create_device", "delete_device", "edit_device",
 		"list_device_tasks", "edit_device_task", "get_device_capabilities",
 		"setup_email", "remove_email", "check_email", "read_email", "reply_email", "compose_email", "search_email",
-		"send_notification", "setup_telegram_bot",
+		"send_notification", "send_channel_notification", "send_push_notification", "setup_telegram_bot",
 		"setup_dav", "list_dav_integrations", "test_dav_connection", "list_webdav_files",
 		"list_caldav_calendars", "list_carddav_address_books",
 		"create_caldav_event", "delete_caldav_event",
@@ -190,8 +195,11 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 		return s.toolSearchEmail(ctx, userID, args)
 
 	// ── Notification ─────────────────────────────────────────────────
-	case "send_notification":
+	case "send_notification", "send_channel_notification":
 		return s.toolSendNotification(ctx, userID, args)
+
+	case "send_push_notification":
+		return s.toolSendPushNotification(ctx, userID, args)
 
 	// ── Channels ─────────────────────────────────────────────────────
 	case "setup_telegram_bot":

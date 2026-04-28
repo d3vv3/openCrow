@@ -36,6 +36,15 @@ services:
     restart: unless-stopped
     cap_add:
       - SYS_ADMIN
+    security_opt:
+      # The default Docker seccomp profile blocks the mount(2) syscall even
+      # when SYS_ADMIN is granted. The sandbox entrypoint uses mount --bind
+      # to set up /proc, /dev, /sys and /data/skills inside the sandbox, so
+      # we must lift that restriction here.
+      # On Debian/Ubuntu hosts, AppArmor's docker-default profile also blocks
+      # mount regardless of capabilities -- apparmor:unconfined is needed too.
+      - seccomp:unconfined
+      - apparmor:unconfined
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://opencrow:opencrow@postgres:5432/opencrow?sslmode=disable}
       API_HOST: ${API_HOST:-0.0.0.0}

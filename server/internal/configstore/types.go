@@ -159,10 +159,11 @@ func (c *IntegrationsConfig) UnmarshalJSON(data []byte) error {
 }
 
 type CompanionAppConfig struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Label   string `json:"label"`
-	Enabled bool   `json:"enabled"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Label        string `json:"label"`
+	Enabled      bool   `json:"enabled"`
+	PushEndpoint string `json:"pushEndpoint,omitempty"`
 }
 
 type SSHServerConfig struct {

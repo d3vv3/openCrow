@@ -35,6 +35,9 @@ func (s *Server) findUserByID(ctx context.Context, id string) (UserDTO, string, 
 }
 
 func (s *Server) createSessionAndTokens(ctx context.Context, userID, deviceLabel string) (auth.TokenPair, error) {
+	// Prune sessions whose refresh token has expired before enforcing the limit.
+	_ = s.pruneExpiredSessions(ctx, userID)
+
 	// Enforce per-user session limit if configured.
 	if s.maxSessionsPerUser > 0 {
 		const countQ = `SELECT COUNT(*) FROM device_sessions WHERE user_id = $1::uuid;`
@@ -150,4 +153,26 @@ RETURNING id;
 `
 	var id string
 	return s.db.QueryRow(ctx, q, sessionID, userID).Scan(&id)
+}
+
+// pruneExpiredSessions deletes device sessions whose refresh token has lapsed,
+// based on last_seen_at + refreshTTL. This runs before the session-limit check
+// so stale sessions don't block new pairings.
+func (s *Server) pruneExpiredSessions(ctx context.Context, userID string) error {
+	ttl := s.authMgr.RefreshTTL()
+	const q = `
+DELETE FROM device_sessions
+WHERE user_id = $1::uuid
+  AND last_seen_at < NOW() - ($2 || ' seconds')::interval;
+`
+	_, err := s.db.Exec(ctx, q, userID, int64(ttl.Seconds()))
+	return err
+}
+
+// deleteSessionByDeviceID removes the device_session whose id matches the given
+// device_id (they share the same UUID). Called on logout and device removal.
+func (s *Server) deleteSessionByDeviceID(ctx context.Context, userID, deviceID string) error {
+	const q = `DELETE FROM device_sessions WHERE id = $1::uuid AND user_id = $2::uuid;`
+	_, err := s.db.Exec(ctx, q, deviceID, userID)
+	return err
 }

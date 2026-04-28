@@ -248,6 +248,8 @@ definitions:
         type: string
       lastSeenAt:
         type: string
+      pushEndpoint:
+        type: string
     type: object
   api.DeviceTaskDTO:
     properties:
@@ -546,6 +548,10 @@ definitions:
         items:
           $ref: '#/definitions/api.DeviceCapability'
         type: array
+      pushAuth:
+        type: string
+      pushEndpoint:
+        type: string
     type: object
   api.RunServerCommandRequest:
     properties:
@@ -888,6 +894,8 @@ definitions:
       label:
         type: string
       name:
+        type: string
+      pushEndpoint:
         type: string
     type: object
   configstore.DAVConfig:

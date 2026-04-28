@@ -378,12 +378,15 @@ type RecordToolCallRequest struct {
 
 type RegisterDeviceRequest struct {
 	Capabilities []DeviceCapability `json:"capabilities"`
+	PushEndpoint string             `json:"pushEndpoint,omitempty"`
+	PushAuth     string             `json:"pushAuth,omitempty"`
 }
 
 type DeviceRegistrationDTO struct {
 	DeviceID     string             `json:"deviceId"`
 	Capabilities []DeviceCapability `json:"capabilities"`
 	LastSeenAt   string             `json:"lastSeenAt"`
+	PushEndpoint string             `json:"pushEndpoint,omitempty"`
 }
 
 // CreateDeviceTokensRequest is the request body for POST /v1/auth/device-tokens.

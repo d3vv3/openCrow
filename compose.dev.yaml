@@ -54,6 +54,9 @@ services:
     container_name: opencrow-server-dev
     cap_add:
       - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://opencrow:opencrow@postgres:5432/opencrow?sslmode=disable}
       API_HOST: ${API_HOST:-0.0.0.0}

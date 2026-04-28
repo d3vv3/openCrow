@@ -3844,6 +3844,9 @@
                 },
                 "lastSeenAt": {
                     "type": "string"
+                },
+                "pushEndpoint": {
+                    "type": "string"
                 }
             }
         },
@@ -4302,6 +4305,12 @@
                     "items": {
                         "$ref": "#/definitions/api.DeviceCapability"
                     }
+                },
+                "pushAuth": {
+                    "type": "string"
+                },
+                "pushEndpoint": {
+                    "type": "string"
                 }
             }
         },
@@ -4827,6 +4836,9 @@
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "pushEndpoint": {
                     "type": "string"
                 }
             }

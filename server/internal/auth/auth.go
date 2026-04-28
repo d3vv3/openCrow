@@ -39,6 +39,8 @@ func NewManager(issuer, secret string, accessTTL, refreshTTL time.Duration) *Man
 	}
 }
 
+func (m *Manager) RefreshTTL() time.Duration { return m.refreshTTL }
+
 func (m *Manager) NewTokenPair(userID, sessionID string) (TokenPair, error) {
 	accessToken, err := m.sign(userID, sessionID, "access", m.accessTTL)
 	if err != nil {

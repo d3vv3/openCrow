@@ -73,6 +73,19 @@ func (s *Server) toolSendNotification(ctx context.Context, userID string, args m
 	if telegramSent > 0 {
 		detail += fmt.Sprintf(" Also sent to %d Telegram bot(s).", telegramSent)
 	}
+
+	// Fanout to UnifiedPush endpoints for all registered devices
+	channel, _ := args["channel"].(string)
+	if endpoints, err := s.getDevicePushEndpoints(ctx, userID); err == nil {
+		for _, ep := range endpoints {
+			if err := s.sendUnifiedPush(ctx, ep, title, body, channel, ""); err != nil {
+				log.Printf("[send_notification] UP push to %s error: %v", ep, err)
+			} else {
+				detail += " UP push sent."
+			}
+		}
+	}
+
 	return map[string]any{
 		"success": true,
 		"message": detail,
@@ -110,6 +123,70 @@ func (s *Server) notifyChannels(ctx context.Context, userID, title, body string)
 			log.Printf("[channels] telegram bot %s notify error: %v", bot.Label, err)
 		}
 	}
+
+	// Fanout to UnifiedPush endpoints for all registered devices
+	if endpoints, err := s.getDevicePushEndpoints(ctx, userID); err == nil {
+		for _, ep := range endpoints {
+			if err := s.sendUnifiedPush(ctx, ep, title, body, "", ""); err != nil {
+				log.Printf("[channels] UP push to %s error: %v", ep, err)
+			}
+		}
+	}
+}
+
+// toolSendPushNotification sends a UnifiedPush notification directly to one or all companion
+// devices registered for the user. Unlike send_notification it only targets UP endpoints
+// and does not fanout to Telegram or the realtime hub.
+func (s *Server) toolSendPushNotification(ctx context.Context, userID string, args map[string]any) (map[string]any, error) {
+	title, _ := args["title"].(string)
+	body, _ := args["body"].(string)
+	if title == "" || body == "" {
+		return map[string]any{"success": false, "error": "title and body are required"}, nil
+	}
+	channel, _ := args["channel"].(string)
+	deviceID, _ := args["device_id"].(string)
+	conversationID, _ := args["conversation_id"].(string)
+	if conversationID == "" {
+		conversationID, _ = ctx.Value(conversationIDContextKey).(string)
+	}
+
+	var endpoints []string
+	if deviceID != "" {
+		ep, err := s.getDevicePushEndpoint(ctx, userID, deviceID)
+		if err != nil {
+			return map[string]any{"success": false, "error": "device not found"}, nil
+		}
+		if ep == "" {
+			return map[string]any{"success": false, "error": "device has no registered push endpoint"}, nil
+		}
+		endpoints = []string{ep}
+	} else {
+		eps, err := s.getDevicePushEndpoints(ctx, userID)
+		if err != nil {
+			return map[string]any{"success": false, "error": "failed to load push endpoints"}, nil
+		}
+		if len(eps) == 0 {
+			return map[string]any{"success": false, "error": "no devices have a registered push endpoint"}, nil
+		}
+		endpoints = eps
+	}
+
+	sent := 0
+	for _, ep := range endpoints {
+		if err := s.sendUnifiedPush(ctx, ep, title, body, channel, conversationID); err != nil {
+			log.Printf("[send_push_notification] UP push to %s error: %v", ep, err)
+		} else {
+			sent++
+		}
+	}
+
+	if sent == 0 {
+		return map[string]any{"success": false, "error": "failed to deliver push to any endpoint"}, nil
+	}
+	return map[string]any{
+		"success": true,
+		"message": fmt.Sprintf("Push notification delivered to %d device(s).", sent),
+	}, nil
 }
 
 // ── Channel setup tools ───────────────────────────────────────────────────

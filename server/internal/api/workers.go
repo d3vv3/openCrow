@@ -105,6 +105,9 @@ func (s *Server) runOrchestratorForUser(ctx context.Context, workerName, userID,
 // the full conversation history from the DB and passes it to the LLM, giving
 // the model context of the ongoing conversation.
 func (s *Server) runOrchestratorForUserWithHistory(ctx context.Context, workerName, userID, convID, prompt string) (orchestrator.CompletionResult, error) {
+	if convID != "" {
+		ctx = context.WithValue(ctx, conversationIDContextKey, convID)
+	}
 	var cfg *configstore.UserConfig
 	if s.configStore != nil {
 		if c, err := s.configStore.GetUserConfig(userID); err == nil {

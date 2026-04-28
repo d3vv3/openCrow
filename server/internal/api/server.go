@@ -23,6 +23,7 @@ type contextKey string
 const userIDContextKey contextKey = "userID"
 const sessionIDContextKey contextKey = "sessionID"
 const clientTimezoneContextKey contextKey = "clientTimezone"
+const conversationIDContextKey contextKey = "conversationID"
 
 type Server struct {
 	env                 string

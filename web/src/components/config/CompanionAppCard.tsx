@@ -131,6 +131,14 @@ export function CompanionAppCard({
         >
           {isOnline ? "online" : "offline"}
         </span>
+        {registration?.pushEndpoint && (
+          <span
+            title={`UnifiedPush active: ${registration.pushEndpoint}`}
+            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-500/15 text-blue-400 border border-blue-500/20"
+          >
+            🔔 push
+          </span>
+        )}
         <span className="text-xs text-on-surface-variant font-mono px-2 py-1 bg-white/5 rounded">
           ID: {app.id || "legacy"}
         </span>

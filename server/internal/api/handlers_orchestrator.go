@@ -46,6 +46,7 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 
 	ctx, cancel := context.WithTimeout(r.Context(), 120*time.Second)
 	defer cancel()
+	ctx = context.WithValue(ctx, conversationIDContextKey, req.ConversationID)
 
 	// Load user config once
 	var cfg *configstore.UserConfig
@@ -59,7 +60,7 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 	systemPrompt := s.buildSystemPrompt(ctx, userID, cfg)
 
 	// Build tool specs from enabled tools (native + MCP)
-	toolSpecs := s.buildEnabledToolSpecs(ctx, cfg)
+	toolSpecs := s.buildEnabledToolSpecs(ctx, userID, cfg)
 
 	// Load conversation history
 	history, err := s.listMessages(ctx, userID, req.ConversationID)
@@ -214,6 +215,7 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 
 	ctx, cancel := context.WithTimeout(r.Context(), 120*time.Second)
 	defer cancel()
+	ctx = context.WithValue(ctx, conversationIDContextKey, req.ConversationID)
 
 	var cfg *configstore.UserConfig
 	if s.configStore != nil {
@@ -224,7 +226,7 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 
 	systemPrompt := s.buildSystemPrompt(ctx, userID, cfg)
 
-	toolSpecs := s.buildEnabledToolSpecs(ctx, cfg)
+	toolSpecs := s.buildEnabledToolSpecs(ctx, userID, cfg)
 
 	// scheduleableDeviceTools is the set of device tool base-names that make sense
 	// to queue as async device_tasks when no device is actively connected.
@@ -233,12 +235,12 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 		"create_calendar_event": true,
 		"create_contact":        true,
 		"send_sms":              true,
-		"send_notification":     true,
 	}
 
 	// liveOnlyDeviceTools are exposed to the LLM when no device is connected, but
 	// they cannot be scheduled -- the LLM must tell the user to use the mobile app.
 	liveOnlyDeviceTools := map[string]bool{
+		"send_notification": true,
 		"toggle_flashlight": true,
 		"set_volume":        true,
 		"set_brightness":    true,
@@ -277,15 +279,9 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 						if _, already := scheduleToolTargets[baseName]; already {
 							continue // only register first device per tool
 						}
-						desc := cap.Description
-						if desc != "" {
-							desc += " (will be scheduled on your companion device)"
-						} else {
-							desc = "Will be scheduled on your companion device"
-						}
 						toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
 							Name:        baseName,
-							Description: desc,
+							Description: cap.Description,
 							Parameters:  cap.Parameters,
 						})
 						scheduleToolTargets[baseName] = deviceID
@@ -678,7 +674,7 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 
 	systemPrompt := s.buildSystemPrompt(ctx, userID, cfg)
 
-	toolSpecs := s.buildEnabledToolSpecs(ctx, cfg)
+	toolSpecs := s.buildEnabledToolSpecs(ctx, userID, cfg)
 
 	// Pick streaming provider (sorted by Priority, ascending = highest priority first)
 	sortedProviders2 := buildProvidersFromConfig(ctx, cfg)
@@ -830,13 +826,34 @@ func (s *Server) handleRegenerateMessage(w http.ResponseWriter, r *http.Request)
 	sendEvent("done", map[string]string{"output": fullOutput, "messageId": msgID})
 }
 
-func (s *Server) buildEnabledToolSpecs(ctx context.Context, cfg *configstore.UserConfig) []orchestrator.ToolSpec {
+func (s *Server) buildEnabledToolSpecs(ctx context.Context, userID string, cfg *configstore.UserConfig) []orchestrator.ToolSpec {
 	if cfg == nil {
 		return nil
 	}
 
 	toolSpecs := make([]orchestrator.ToolSpec, 0)
 	seen := map[string]struct{}{}
+
+	// Always expose send_push_notification when at least one device has a UP endpoint,
+	// regardless of whether the user has manually configured it in cfg.Tools.
+	if eps, err := s.getDevicePushEndpoints(ctx, userID); err == nil && len(eps) > 0 {
+		toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
+			Name:        "send_push_notification",
+			Description: "Send a push notification directly to the user's companion device(s). Use this to proactively notify the user on their phone. Include conversation_id when the notification relates to a specific chat so tapping it opens that conversation in the app.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"title":           map[string]any{"type": "string", "description": "Notification title"},
+					"body":            map[string]any{"type": "string", "description": "Notification body text"},
+					"channel":         map[string]any{"type": "string", "description": "Optional notification channel, e.g. 'default' or 'alert'"},
+					"device_id":       map[string]any{"type": "string", "description": "Optional companion device id to target a specific device"},
+					"conversation_id": map[string]any{"type": "string", "description": "Optional conversation id to open when the user taps the notification"},
+				},
+				"required": []string{"title", "body"},
+			},
+		})
+		seen["send_push_notification"] = struct{}{}
+	}
 
 	for _, def := range cfg.Tools.Definitions {
 		enabled := cfg.Tools.Enabled[def.ID]
@@ -845,6 +862,11 @@ func (s *Server) buildEnabledToolSpecs(ctx context.Context, cfg *configstore.Use
 		}
 		name := sanitizeToolName(def.Name)
 		if name == "" {
+			continue
+		}
+		// send_push_notification is now always auto-injected above; skip manual config.
+		// send_notification is a legacy/deprecated name replaced by send_channel_notification; skip it.
+		if name == "send_push_notification" || name == "send_notification" {
 			continue
 		}
 		if _, exists := seen[name]; exists {

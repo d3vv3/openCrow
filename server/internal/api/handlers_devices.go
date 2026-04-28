@@ -93,7 +93,7 @@ func (s *Server) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 		req.Capabilities = []DeviceCapability{}
 	}
 
-	if err := s.upsertDeviceRegistration(r.Context(), userID, deviceID, req.Capabilities); err != nil {
+	if err := s.upsertDeviceRegistration(r.Context(), userID, deviceID, req.Capabilities, req.PushEndpoint, req.PushAuth); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to register device")
 		return
 	}
@@ -103,18 +103,23 @@ func (s *Server) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 		cfg, err := s.configStore.GetUserConfig(userID)
 		if err == nil {
 			found := false
-			for _, app := range cfg.Integrations.CompanionApps {
+			for i, app := range cfg.Integrations.CompanionApps {
 				if app.ID == deviceID {
 					found = true
+					if req.PushEndpoint != "" {
+						cfg.Integrations.CompanionApps[i].PushEndpoint = req.PushEndpoint
+						_, _ = s.configStore.PutUserConfig(userID, cfg)
+					}
 					break
 				}
 			}
 			if !found {
 				cfg.Integrations.CompanionApps = append(cfg.Integrations.CompanionApps, configstore.CompanionAppConfig{
-					ID:      deviceID,
-					Name:    deviceID,
-					Label:   deviceID,
-					Enabled: true,
+					ID:           deviceID,
+					Name:         deviceID,
+					Label:        deviceID,
+					Enabled:      true,
+					PushEndpoint: req.PushEndpoint,
 				})
 				_, _ = s.configStore.PutUserConfig(userID, cfg)
 			}
@@ -278,6 +283,11 @@ func (s *Server) handleDeleteDevice(w http.ResponseWriter, r *http.Request) {
 	if err := s.deleteDeviceRegistration(r.Context(), userID, deviceID); err != nil {
 		log.Printf("[devices] delete registration %s: %v", deviceID, err)
 		// not fatal -- may already be unregistered
+	}
+
+	// Revoke the device session so the session slot is freed immediately.
+	if err := s.deleteSessionByDeviceID(r.Context(), userID, deviceID); err != nil {
+		log.Printf("[devices] delete session for %s: %v", deviceID, err)
 	}
 
 	if err := s.deleteDeviceTasksByTarget(r.Context(), userID, deviceID); err != nil {

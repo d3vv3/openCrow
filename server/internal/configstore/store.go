@@ -200,7 +200,7 @@ func normalize(cfg UserConfig) UserConfig {
 				break
 			}
 			// Migrate renamed tools
-			renames := map[string]string{"ssh_execute": "remote_execute"}
+			renames := map[string]string{"ssh_execute": "remote_execute", "send_notification": "send_channel_notification"}
 			if old, ok := renames[defaultTool.Name]; ok && strings.EqualFold(existing.Name, old) {
 				exists = true
 				cfg.Tools.Definitions[i].Name = defaultTool.Name
