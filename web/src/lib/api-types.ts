@@ -140,6 +140,13 @@ export interface DeviceRegistration {
   pushEndpoint?: string;
 }
 
+export interface DeviceSession {
+  id: string;
+  deviceLabel: string;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
 export interface CompanionAppConfig {
   id?: string;
   name: string;
@@ -219,11 +226,34 @@ export interface InstallSkillsResult {
   count: number;
 }
 
-export interface MemoryEntry {
-  id?: string;
-  category: string;
-  content: string;
+export interface MemoryEntity {
+  id: string;
+  user_id: string;
+  type: string;
+  name: string;
+  summary?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemoryRelation {
+  id: string;
+  user_id: string;
+  from_entity_id: string;
+  from_entity_name?: string;
+  to_entity_id: string;
+  to_entity_name?: string;
+  relation: string;
   confidence: number;
+  reinforcement_count: number;
+  source_conversation_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemoryGraph {
+  entities: MemoryEntity[];
+  relations: MemoryRelation[];
 }
 
 export interface TaskDTO {
@@ -401,7 +431,6 @@ export interface UserConfig {
   llm: { providers: ProviderConfig[] };
   skills: { entries: SkillEntry[] };
   prompts: { systemPrompt: string; heartbeatPrompt: string };
-  memory: { entries: MemoryEntry[] };
   schedules: { entries: ScheduleEntry[] };
   heartbeat: HeartbeatConfig;
   voice: VoiceConfig;
@@ -429,7 +458,6 @@ export interface ServerUserConfig {
   llm?: { providers?: ProviderConfig[] };
   skills?: { entries?: SkillEntry[] };
   prompts?: { systemPrompt?: string; heartbeatPrompt?: string };
-  memory?: { entries?: MemoryEntry[] };
   schedules?: {
     entries?: Array<Omit<ScheduleEntry, "cronExpression"> & { cronExpression?: string | null }>;
   };

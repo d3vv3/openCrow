@@ -117,15 +117,6 @@ definitions:
       useTls:
         type: boolean
     type: object
-  api.CreateMemoryRequest:
-    properties:
-      category:
-        type: string
-      confidence:
-        type: integer
-      content:
-        type: string
-    type: object
   api.CreateMessageAttachmentRequest:
     properties:
       createdAt:
@@ -418,19 +409,80 @@ definitions:
       name:
         type: string
     type: object
-  api.MemoryDTO:
+  api.MemoryEntity:
     properties:
-      category:
-        type: string
-      confidence:
-        type: integer
-      content:
-        type: string
-      createdAt:
+      created_at:
         type: string
       id:
         type: string
-      updatedAt:
+      name:
+        type: string
+      summary:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  api.MemoryGraph:
+    properties:
+      entities:
+        items:
+          $ref: '#/definitions/api.MemoryEntity'
+        type: array
+      observations:
+        items:
+          $ref: '#/definitions/api.MemoryObservation'
+        type: array
+      relations:
+        items:
+          $ref: '#/definitions/api.MemoryRelation'
+        type: array
+    type: object
+  api.MemoryObservation:
+    properties:
+      content:
+        type: string
+      conversation_id:
+        type: string
+      created_at:
+        type: string
+      entity_id:
+        type: string
+      entity_name:
+        type: string
+      id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  api.MemoryRelation:
+    properties:
+      confidence:
+        type: number
+      created_at:
+        type: string
+      from_entity_id:
+        type: string
+      from_entity_name:
+        type: string
+      id:
+        type: string
+      reinforcement_count:
+        type: integer
+      relation:
+        type: string
+      source_conversation_id:
+        type: string
+      to_entity_id:
+        type: string
+      to_entity_name:
+        type: string
+      updated_at:
+        type: string
+      user_id:
         type: string
     type: object
   api.MessageAttachmentDTO:
@@ -1040,24 +1092,6 @@ definitions:
       url:
         type: string
     type: object
-  configstore.MemoryConfig:
-    properties:
-      entries:
-        items:
-          $ref: '#/definitions/configstore.MemoryEntry'
-        type: array
-    type: object
-  configstore.MemoryEntry:
-    properties:
-      category:
-        type: string
-      content:
-        type: string
-      id:
-        type: string
-      strength:
-        type: integer
-    type: object
   configstore.PromptsConfig:
     properties:
       heartbeatPrompt:
@@ -1235,8 +1269,6 @@ definitions:
         $ref: '#/definitions/configstore.LLMConfig'
       mcp:
         $ref: '#/definitions/configstore.MCPConfig'
-      memory:
-        $ref: '#/definitions/configstore.MemoryConfig'
       prompts:
         $ref: '#/definitions/configstore.PromptsConfig'
       schedules:
@@ -1930,6 +1962,33 @@ paths:
       summary: Delete a device task by ID
       tags:
       - devices
+    get:
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.DeviceTaskDTO'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a single device task by ID
+      tags:
+      - devices
     patch:
       consumes:
       - application/json
@@ -2383,62 +2442,29 @@ paths:
       summary: Test an MCP server connection and list its tools
       tags:
       - config
-  /v1/memory:
-    get:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              items:
-                $ref: '#/definitions/api.MemoryDTO'
-              type: array
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: List all memory entries for the current user
-      tags:
-      - memory
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Memory entry
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/api.CreateMemoryRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/api.MemoryDTO'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Create a new memory entry
-      tags:
-      - memory
-  /v1/memory/{id}:
+  /v1/memory/entities/{id}:
     delete:
       parameters:
-      - description: Memory ID
+      - description: Entity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete memory entity
+      tags:
+      - memory
+    get:
+      parameters:
+      - description: Entity ID
         in: path
         name: id
         required: true
@@ -2449,24 +2475,54 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: boolean
+            additionalProperties: true
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
         "404":
           description: Not Found
           schema:
             $ref: '#/definitions/api.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Delete a memory entry by ID
+      summary: Get memory entity
+      tags:
+      - memory
+  /v1/memory/graph:
+    get:
+      description: Returns all memory entities and relations for the user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MemoryGraph'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get memory graph
+      tags:
+      - memory
+  /v1/memory/relations/{id}:
+    delete:
+      parameters:
+      - description: Relation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete memory relation
       tags:
       - memory
   /v1/orchestrator/complete:

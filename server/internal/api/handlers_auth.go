@@ -343,6 +343,10 @@ func (s *Server) handleCreateDeviceTokens(w http.ResponseWriter, r *http.Request
 	tokens, err := s.createSessionAndTokens(ctx, userID, label)
 	if err != nil {
 		log.Printf("handleCreateDeviceTokens failed user_id=%s device_label=%q err=%v", userID, label, err)
+		if strings.Contains(err.Error(), "session limit reached") {
+			writeError(w, http.StatusTooManyRequests, "maximum number of sessions reached")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "unable to create device session")
 		return
 	}

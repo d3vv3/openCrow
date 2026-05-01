@@ -70,7 +70,7 @@ func isBuiltinToolName(name string) bool {
 	switch name {
 	case "get_local_time", "get_location",
 		"web_search", "open_url",
-		"store_memory", "forget_memory", "learn_memory", "read_memory", "reinforce_memory", "promote_learning",
+		"remember_memory_entity", "relate_memory_entities", "search_memory", "forget_memory_entity", "edit_memory_entity",
 		"list_tasks", "schedule_task", "cancel_task",
 		"configure_heartbeat", "trigger_heartbeat", "queue_device_action",
 		"list_devices", "create_device", "delete_device", "edit_device",
@@ -112,24 +112,21 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 	case "open_url":
 		return s.toolOpenURL(ctx, args)
 
-	// ── Memory ───────────────────────────────────────────────────────
-	case "store_memory":
-		return s.toolStoreMemory(ctx, userID, args)
+	// ── Memory Graph ─────────────────────────────────────────────────
+	case "remember_memory_entity":
+		return s.toolRememberEntity(ctx, userID, args)
 
-	case "forget_memory":
-		return s.toolForgetMemory(ctx, userID, args)
+	case "relate_memory_entities":
+		return s.toolRelateEntities(ctx, userID, args)
 
-	case "learn_memory":
-		return s.toolLearnMemory(ctx, userID, args)
+	case "search_memory":
+		return s.toolSearchMemory(ctx, userID, args)
 
-	case "read_memory":
-		return s.toolReadMemory(ctx, userID)
+	case "forget_memory_entity":
+		return s.toolForgetEntity(ctx, userID, args)
 
-	case "reinforce_memory":
-		return s.toolReinforceMemory(ctx, userID, args)
-
-	case "promote_learning":
-		return s.toolPromoteLearning(ctx, userID, args)
+	case "edit_memory_entity":
+		return s.toolEditEntity(ctx, userID, args)
 
 	// ── Tasks / Scheduling ───────────────────────────────────────────
 	case "list_tasks":

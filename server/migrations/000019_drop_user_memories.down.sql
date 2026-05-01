@@ -1,0 +1,2 @@
+-- user_memories table was removed in 000019; no automatic rollback possible
+-- (data would be lost). This is intentionally a no-op.

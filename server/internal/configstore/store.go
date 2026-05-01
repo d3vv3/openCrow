@@ -218,6 +218,24 @@ func normalize(cfg UserConfig) UserConfig {
 	}
 	cfg.Tools.Toggles = nil
 
+	// Prune obsolete built-in tool definitions that were removed.
+	obsoleteTools := map[string]bool{
+		"learn_memory": true, "reinforce_memory": true, "store_memory": true,
+		"promote_learning": true, "read_memory": true, "forget_memory": true,
+		// renamed to *_memory_* variants
+		"remember_entity": true, "relate_entities": true,
+		"forget_entity": true, "edit_entity": true,
+	}
+	filtered := cfg.Tools.Definitions[:0]
+	for _, d := range cfg.Tools.Definitions {
+		if obsoleteTools[d.Name] {
+			delete(cfg.Tools.Enabled, d.ID)
+			continue
+		}
+		filtered = append(filtered, d)
+	}
+	cfg.Tools.Definitions = filtered
+
 	if cfg.Tools.GolangTools == nil {
 		cfg.Tools.GolangTools = []GolangToolEntry{}
 	}
@@ -311,18 +329,6 @@ func normalize(cfg UserConfig) UserConfig {
 	for i := range cfg.Skills.Entries {
 		if cfg.Skills.Entries[i].ID == "" {
 			cfg.Skills.Entries[i].ID = uuid.NewString()
-		}
-	}
-
-	if cfg.Memory.Entries == nil {
-		cfg.Memory.Entries = []MemoryEntry{}
-	}
-	for i := range cfg.Memory.Entries {
-		if cfg.Memory.Entries[i].ID == "" {
-			cfg.Memory.Entries[i].ID = uuid.NewString()
-		}
-		if cfg.Memory.Entries[i].Strength <= 0 {
-			cfg.Memory.Entries[i].Strength = 1
 		}
 	}
 

@@ -127,21 +127,6 @@ type UpdateTaskRequest struct {
 	Status         *string `json:"status,omitempty"`
 }
 
-type MemoryDTO struct {
-	ID         string `json:"id"`
-	Category   string `json:"category"`
-	Content    string `json:"content"`
-	Confidence int    `json:"confidence"`
-	CreatedAt  string `json:"createdAt"`
-	UpdatedAt  string `json:"updatedAt"`
-}
-
-type CreateMemoryRequest struct {
-	Category   string `json:"category"`
-	Content    string `json:"content"`
-	Confidence int    `json:"confidence,omitempty"`
-}
-
 type UserSettingsDTO struct {
 	UserID    string         `json:"userId"`
 	Settings  map[string]any `json:"settings"`

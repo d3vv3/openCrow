@@ -1,7 +1,6 @@
 // config/index.ts — Barrel export for all config sub-components.
 
 export { SaveBar } from "./SaveBar";
-export { MemoryRow } from "./MemoryRow";
 export { ProviderCard } from "./ProviderCard";
 export { McpServerCard } from "./McpServerCard";
 export { EmailTab } from "./EmailTab";
@@ -16,7 +15,6 @@ export { ToolsTab } from "./ToolsTab";
 export { ProvidersTab } from "./ProvidersTab";
 export { McpTab } from "./McpTab";
 export { SoulTab } from "./SoulTab";
-export { MemoryTab } from "./MemoryTab";
 export { HeartbeatTab } from "./HeartbeatTab";
 export { VoiceTab } from "./VoiceTab";
 export * from "./types";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { UserConfig, DeviceRegistration } from "@/lib/api";
+import type { UserConfig, DeviceRegistration, DeviceSession } from "@/lib/api";
 import { endpoints, getApiBase } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +28,7 @@ export function DevicesTab({
   saveStatus: string | null;
 }) {
   const [registrations, setRegistrations] = useState<Record<string, DeviceRegistration>>({});
+  const [sessions, setSessions] = useState<DeviceSession[]>([]);
   const [serverUrl, setServerUrl] = useState(() => getApiBase());
   const [isAddingDevice, setIsAddingDevice] = useState(false);
   const [removingOrphan, setRemovingOrphan] = useState<string | null>(null);
@@ -35,9 +36,13 @@ export function DevicesTab({
 
   const companionApps = config.integrations.companionApps || [];
   const configuredIds = new Set(companionApps.map((a) => a.id).filter(Boolean));
+  // Orphan registrations: in DB but not in config
   const orphanRegistrations = Object.values(registrations).filter(
     (r) => !configuredIds.has(r.deviceId),
   );
+  // Orphan sessions: session exists but has no device registration (cancelled pairings etc.)
+  const registeredDeviceIds = new Set(Object.keys(registrations));
+  const orphanSessions = sessions.filter((s) => !registeredDeviceIds.has(s.id));
 
   const loadRegistrations = useCallback(() => {
     endpoints
@@ -47,6 +52,10 @@ export function DevicesTab({
         for (const r of res.registrations ?? []) map[r.deviceId] = r;
         setRegistrations(map);
       })
+      .catch(() => {});
+    endpoints
+      .listSessions()
+      .then((res) => setSessions(res.sessions ?? []))
       .catch(() => {});
   }, []);
 
@@ -66,8 +75,22 @@ export function DevicesTab({
         delete next[deviceId];
         return next;
       });
+      // Server also deletes the session for this device -- remove it from local state too
+      setSessions((prev) => prev.filter((s) => s.id !== deviceId));
     } catch (e) {
       console.error("Failed to remove orphan device:", e);
+    } finally {
+      setRemovingOrphan(null);
+    }
+  };
+
+  const handleRemoveOrphanSession = async (sessionId: string) => {
+    setRemovingOrphan(sessionId);
+    try {
+      await endpoints.deleteSession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (e) {
+      console.error("Failed to remove orphan session:", e);
     } finally {
       setRemovingOrphan(null);
     }
@@ -161,6 +184,51 @@ export function DevicesTab({
                     className="hover:text-error shrink-0"
                     loading={removingOrphan === reg.deviceId}
                     onClick={() => handleRemoveOrphan(reg.deviceId)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {orphanSessions.length > 0 && (
+        <>
+          <div className="h-px bg-white/10" />
+          <div className="space-y-4">
+            <SectionHeader
+              title="Orphan Sessions"
+              description="Sessions that were created (e.g. during pairing) but never completed registration. Safe to remove."
+            />
+            {orphanSessions.map((session) => {
+              const lastSeen = new Date(session.lastSeenAt);
+              const created = new Date(session.createdAt);
+              return (
+                <div
+                  key={session.id}
+                  className="flex items-center gap-3 p-4 rounded-lg border border-white/10 bg-surface-mid"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-mono text-on-surface-variant">
+                      {session.deviceLabel || session.id}
+                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-on-surface-variant">
+                        created {created.toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant">
+                        last seen {lastSeen.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:text-error shrink-0"
+                    loading={removingOrphan === session.id}
+                    onClick={() => handleRemoveOrphanSession(session.id)}
                   >
                     Remove
                   </Button>

@@ -2,6 +2,54 @@ import type { SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
+export function MemoryIcon(props: IconProps) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" {...props}>
+      <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="2.5" cy="5" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="13.5" cy="5" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="2.5" cy="11" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="13.5" cy="11" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <line
+        x1="5.3"
+        y1="6.8"
+        x2="3.8"
+        y2="6"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <line
+        x1="10.7"
+        y1="6.8"
+        x2="12.2"
+        y2="6"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <line
+        x1="5.3"
+        y1="9.2"
+        x2="3.8"
+        y2="10"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <line
+        x1="10.7"
+        y1="9.2"
+        x2="12.2"
+        y2="10"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function ChatIcon(props: IconProps) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" {...props}>

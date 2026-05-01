@@ -300,6 +300,7 @@ func (s *Server) routes() {
 	s.mux.Handle("POST /v1/tool-results/{callId}", s.requireAccessToken(http.HandlerFunc(s.handleLocalToolResult)))
 	s.mux.Handle("GET /v1/devices/tasks", s.requireAccessToken(http.HandlerFunc(s.handleListDeviceTasks)))
 	s.mux.Handle("POST /v1/devices/tasks", s.requireAccessToken(http.HandlerFunc(s.handleCreateDeviceTask)))
+	s.mux.Handle("GET /v1/devices/tasks/{id}", s.requireAccessToken(http.HandlerFunc(s.handleGetDeviceTask)))
 	s.mux.Handle("DELETE /v1/devices/tasks/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteDeviceTask)))
 	s.mux.Handle("PATCH /v1/devices/tasks/{id}", s.requireAccessToken(http.HandlerFunc(s.handleUpdateDeviceTask)))
 	s.mux.Handle("POST /v1/devices/tasks/{id}/complete", s.requireAccessToken(http.HandlerFunc(s.handleCompleteDeviceTask)))
@@ -361,9 +362,10 @@ func (s *Server) registerTaskRoutes() {
 }
 
 func (s *Server) registerMemoryRoutes() {
-	s.mux.Handle("GET /v1/memory", s.requireAccessToken(http.HandlerFunc(s.handleListMemories)))
-	s.mux.Handle("POST /v1/memory", s.requireAccessToken(http.HandlerFunc(s.handleCreateMemory)))
-	s.mux.Handle("DELETE /v1/memory/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteMemory)))
+	s.mux.Handle("GET /v1/memory/graph", s.requireAccessToken(http.HandlerFunc(s.handleGetMemoryGraph)))
+	s.mux.Handle("GET /v1/memory/entities/{id}", s.requireAccessToken(http.HandlerFunc(s.handleGetMemoryEntity)))
+	s.mux.Handle("DELETE /v1/memory/entities/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteMemoryEntity)))
+	s.mux.Handle("DELETE /v1/memory/relations/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteMemoryRelation)))
 }
 
 func (s *Server) registerSettingsRoutes() {

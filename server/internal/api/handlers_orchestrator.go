@@ -130,6 +130,8 @@ func (s *Server) handleOrchestratorComplete(w http.ResponseWriter, r *http.Reque
 		log.Printf("warn: unable to save assistant message: %v", err)
 	}
 
+
+
 	s.realtimeHub.Publish(realtime.Event{
 		UserID: userID,
 		Type:   "orchestrator.complete",
@@ -231,10 +233,22 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 	// scheduleableDeviceTools is the set of device tool base-names that make sense
 	// to queue as async device_tasks when no device is actively connected.
 	scheduleableDeviceTools := map[string]bool{
-		"set_alarm":             true,
-		"create_calendar_event": true,
-		"create_contact":        true,
-		"send_sms":              true,
+		"set_alarm":              true,
+		"create_calendar_event":  true,
+		"delete_calendar_event":  true,
+		"read_calendar":          true,
+		"create_contact":         true,
+		"send_sms":               true,
+		"read_contacts":          true,
+		"read_call_log":          true,
+		"read_sms":               true,
+		"get_battery":            true,
+		"get_location":           true,
+		"get_wifi_info":          true,
+		"get_device_info":        true,
+		"list_alarms":            true,
+		"delete_alarm":           true,
+		"list_apps":              true,
 	}
 
 	// liveOnlyDeviceTools are exposed to the LLM when no device is connected, but
@@ -447,13 +461,28 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 					}
 				} else if targetDeviceID, isScheduled := scheduleToolTargets[tc.Name]; isScheduled {
 					callSource = "device"
-					// Queue as an async device_task (web UI path - no live device connection)
+					// Queue as an async device_task, then try to wake the device via UP push.
 					toolNameStr := tc.Name
 					task, taskErr := s.createDeviceTask(ctx, userID, targetDeviceID, tc.Name, &toolNameStr, tc.Arguments)
 					if taskErr != nil {
 						execErr = fmt.Errorf("failed to schedule device task: %w", taskErr)
 					} else {
-						result = fmt.Sprintf("Scheduled on your companion device (task ID: %s). The action will execute the next time your device checks in.", task.ID)
+						// Attempt to wake the device via UnifiedPush and wait up to 5s for the result.
+						pushErr := s.sendDeviceTaskPush(ctx, userID, targetDeviceID, task.ID)
+						if pushErr != nil {
+							log.Printf("[orchestrator] UP push for task %s failed: %v (will rely on heartbeat)", task.ID, pushErr)
+						}
+						completed, waitErr := s.waitForDeviceTask(ctx, userID, task.ID, 5*time.Second)
+						if waitErr == nil && completed.ResultOutput != nil {
+							result = *completed.ResultOutput
+							if completed.Status == "failed" {
+								execErr = fmt.Errorf("%s", result)
+								result = ""
+							}
+						} else {
+							// Fallback: device will pick it up on next heartbeat poll.
+							result = fmt.Sprintf("Scheduled on your companion device (task ID: %s). The action will execute the next time your device checks in.", task.ID)
+						}
 					}
 				} else if liveOnlyToolNames[tc.Name] {
 					callSource = "device"

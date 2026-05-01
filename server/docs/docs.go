@@ -944,6 +944,49 @@ const docTemplate = `{
             }
         },
         "/v1/devices/tasks/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Get a single device task by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.DeviceTaskDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -1790,7 +1833,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/memory": {
+        "/v1/memory/entities/{id}": {
             "get": {
                 "security": [
                     {
@@ -1803,66 +1846,84 @@ const docTemplate = `{
                 "tags": [
                     "memory"
                 ],
-                "summary": "List all memory entries for the current user",
+                "summary": "Get memory entity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Entity ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/api.MemoryDTO"
-                                }
-                            }
+                            "additionalProperties": true
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorResponse"
                         }
                     }
                 }
             },
-            "post": {
+            "delete": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "consumes": [
-                    "application/json"
+                "tags": [
+                    "memory"
                 ],
+                "summary": "Delete memory entity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Entity ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/memory/graph": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all memory entities and relations for the user",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "memory"
                 ],
-                "summary": "Create a new memory entry",
-                "parameters": [
-                    {
-                        "description": "Memory entry",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/api.CreateMemoryRequest"
-                        }
-                    }
-                ],
+                "summary": "Get memory graph",
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.MemoryDTO"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.ErrorResponse"
+                            "$ref": "#/definitions/api.MemoryGraph"
                         }
                     },
                     "401": {
@@ -1874,50 +1935,29 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/memory/{id}": {
+        "/v1/memory/relations/{id}": {
             "delete": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "memory"
                 ],
-                "summary": "Delete a memory entry by ID",
+                "summary": "Delete memory relation",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Memory ID",
+                        "description": "Relation ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "boolean"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/api.ErrorResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "404": {
                         "description": "Not Found",
@@ -3651,20 +3691,6 @@ const docTemplate = `{
                 }
             }
         },
-        "api.CreateMemoryRequest": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "confidence": {
-                    "type": "integer"
-                },
-                "content": {
-                    "type": "string"
-                }
-            }
-        },
         "api.CreateMessageAttachmentRequest": {
             "type": "object",
             "properties": {
@@ -4112,25 +4138,118 @@ const docTemplate = `{
                 }
             }
         },
-        "api.MemoryDTO": {
+        "api.MemoryEntity": {
             "type": "object",
             "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "confidence": {
-                    "type": "integer"
-                },
-                "content": {
-                    "type": "string"
-                },
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "updatedAt": {
+                "name": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.MemoryGraph": {
+            "type": "object",
+            "properties": {
+                "entities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.MemoryEntity"
+                    }
+                },
+                "observations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.MemoryObservation"
+                    }
+                },
+                "relations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.MemoryRelation"
+                    }
+                }
+            }
+        },
+        "api.MemoryObservation": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "conversation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.MemoryRelation": {
+            "type": "object",
+            "properties": {
+                "confidence": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "from_entity_id": {
+                    "type": "string"
+                },
+                "from_entity_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reinforcement_count": {
+                    "type": "integer"
+                },
+                "relation": {
+                    "type": "string"
+                },
+                "source_conversation_id": {
+                    "type": "string"
+                },
+                "to_entity_id": {
+                    "type": "string"
+                },
+                "to_entity_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
@@ -5067,34 +5186,6 @@ const docTemplate = `{
                 }
             }
         },
-        "configstore.MemoryConfig": {
-            "type": "object",
-            "properties": {
-                "entries": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/configstore.MemoryEntry"
-                    }
-                }
-            }
-        },
-        "configstore.MemoryEntry": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "content": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "strength": {
-                    "type": "integer"
-                }
-            }
-        },
         "configstore.PromptsConfig": {
             "type": "object",
             "properties": {
@@ -5359,9 +5450,6 @@ const docTemplate = `{
                 },
                 "mcp": {
                     "$ref": "#/definitions/configstore.MCPConfig"
-                },
-                "memory": {
-                    "$ref": "#/definitions/configstore.MemoryConfig"
                 },
                 "prompts": {
                     "$ref": "#/definitions/configstore.PromptsConfig"

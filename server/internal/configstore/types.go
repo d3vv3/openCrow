@@ -19,7 +19,6 @@ type UserConfig struct {
 	LLM          LLMConfig          `json:"llm"`
 	Skills       SkillsConfig       `json:"skills"`
 	Prompts      PromptsConfig      `json:"prompts"`
-	Memory       MemoryConfig       `json:"memory"`
 	Schedules    ScheduleConfig     `json:"schedules"`
 	Heartbeat    HeartbeatConfig    `json:"heartbeat"`
 	Voice        VoiceConfig        `json:"voice"`
@@ -273,17 +272,6 @@ type ProviderConfig struct {
 type PromptsConfig struct {
 	SystemPrompt    string `json:"systemPrompt"`
 	HeartbeatPrompt string `json:"heartbeatPrompt"`
-}
-
-type MemoryConfig struct {
-	Entries []MemoryEntry `json:"entries"`
-}
-
-type MemoryEntry struct {
-	ID       string `json:"id"`
-	Category string `json:"category"`
-	Content  string `json:"content"`
-	Strength int    `json:"strength"`
 }
 
 type ScheduleConfig struct {

@@ -42,44 +42,6 @@ var defaultTools = []ToolDefinition{
 		},
 	},
 	{
-		ID:          "store_memory",
-		Name:        "store_memory",
-		Description: "Create a memory entry.",
-		Source:      "builtin",
-		Parameters: []ToolParameter{
-			{Name: "content", Type: "string", Description: "Memory text", Required: true},
-			{Name: "category", Type: "string", Description: "Memory category", Required: false},
-		},
-	},
-	{
-		ID:          "forget_memory",
-		Name:        "forget_memory",
-		Description: "Remove a memory entry.",
-		Source:      "builtin",
-		Parameters:  []ToolParameter{{Name: "memoryId", Type: "string", Description: "Memory ID", Required: true}},
-	},
-	{
-		ID:          "learn_memory",
-		Name:        "learn_memory",
-		Description: "Learn and store structured memory.",
-		Source:      "builtin",
-		Parameters:  []ToolParameter{{Name: "content", Type: "string", Description: "Memory text", Required: true}},
-	},
-	{
-		ID:          "read_memory",
-		Name:        "read_memory",
-		Description: "Read all stored memories. Returns a list of memory entries with their category, content, strength, and ID.",
-		Source:      "builtin",
-		Parameters:  []ToolParameter{},
-	},
-	{
-		ID:          "reinforce_memory",
-		Name:        "reinforce_memory",
-		Description: "Increase memory strength.",
-		Source:      "builtin",
-		Parameters:  []ToolParameter{{Name: "memoryId", Type: "string", Description: "Memory ID", Required: true}},
-	},
-	{
 		ID:          "schedule_task",
 		Name:        "schedule_task",
 		Description: "Create a one-time or cron task.",
@@ -99,13 +61,6 @@ var defaultTools = []ToolDefinition{
 		Description: "List scheduled tasks.",
 		Source:      "builtin",
 		Parameters:  []ToolParameter{},
-	},
-	{
-		ID:          "promote_learning",
-		Name:        "promote_learning",
-		Description: "Promote strong memory to preferred behavior.",
-		Source:      "builtin",
-		Parameters:  []ToolParameter{{Name: "memoryId", Type: "string", Description: "Memory ID", Required: true}},
 	},
 	{ID: "setup_email", Name: "setup_email", Description: "Configure an email account integration. Auto-detects server settings for Gmail, Outlook, Yahoo, iCloud, etc.", Source: "builtin", Parameters: []ToolParameter{{Name: "address", Type: "string", Description: "Email address", Required: true}, {Name: "password", Type: "string", Description: "Password or app-specific password", Required: true}, {Name: "imap_host", Type: "string", Description: "IMAP server hostname (auto-detected if omitted)", Required: false}, {Name: "imap_port", Type: "integer", Description: "IMAP port (default 993)", Required: false}, {Name: "smtp_host", Type: "string", Description: "SMTP server hostname (auto-detected if omitted)", Required: false}, {Name: "smtp_port", Type: "integer", Description: "SMTP port (default 587)", Required: false}, {Name: "poll_interval_seconds", Type: "integer", Description: "How often to poll the inbox in seconds (default 900)", Required: false}}},
 	{ID: "remove_email", Name: "remove_email", Description: "Remove a configured email account by address.", Source: "builtin", Parameters: []ToolParameter{{Name: "address", Type: "string", Description: "Email address to remove", Required: true}}},
@@ -180,6 +135,60 @@ var defaultTools = []ToolDefinition{
 	{ID: "get_device_capabilities", Name: "get_device_capabilities", Description: "Get the registered capabilities and online status of a specific companion device. Use this before queue_device_action to verify the device supports the intended action.", Source: "builtin", Parameters: []ToolParameter{
 		{Name: "id", Type: "string", Description: "Device ID", Required: true},
 	}},
+
+	// ── Memory Graph ─────────────────────────────────────────────────────────
+	{
+		ID:          "remember_memory_entity",
+		Name:        "remember_memory_entity",
+		Description: "Save or update a named entity in the memory graph (person, place, language, trip, food, preference, etc). Use this to remember important facts about the user or things they mention.",
+		Source:      "builtin",
+		Parameters: []ToolParameter{
+			{Name: "name", Type: "string", Description: "Entity name, e.g. 'Alice', 'Tokyo', 'Spanish'", Required: true},
+			{Name: "type", Type: "string", Description: "Entity type: person, place, language, trip, food, preference, organization, topic, or any free-form label", Required: true},
+			{Name: "summary", Type: "string", Description: "Short description or key fact about this entity", Required: false},
+		},
+	},
+	{
+		ID:          "relate_memory_entities",
+		Name:        "relate_memory_entities",
+		Description: "Create or reinforce a relationship between two entities in the memory graph. The relation is a free-form verb or sentence, e.g. 'speaks', 'visited in 2023', 'is allergic to', 'works at'.",
+		Source:      "builtin",
+		Parameters: []ToolParameter{
+			{Name: "from_name", Type: "string", Description: "Name of the source entity", Required: true},
+			{Name: "to_name", Type: "string", Description: "Name of the target entity", Required: true},
+			{Name: "relation", Type: "string", Description: "Relationship description, e.g. 'speaks', 'visited in 2023', 'is allergic to'", Required: true},
+		},
+	},
+	{
+		ID:          "search_memory",
+		Name:        "search_memory",
+		Description: "Search the memory graph for entities and observations matching a query. Use this to recall facts about the user or things they've mentioned.",
+		Source:      "builtin",
+		Parameters: []ToolParameter{
+			{Name: "query", Type: "string", Description: "Search query, e.g. 'languages', 'Tokyo trip', 'allergies'", Required: true},
+		},
+	},
+	{
+		ID:          "forget_memory_entity",
+		Name:        "forget_memory_entity",
+		Description: "Delete an entity and all its relations from the memory graph.",
+		Source:      "builtin",
+		Parameters: []ToolParameter{
+			{Name: "entity_id", Type: "string", Description: "Entity ID to delete (from search_memory or remember_memory_entity)", Required: true},
+		},
+	},
+	{
+		ID:          "edit_memory_entity",
+		Name:        "edit_memory_entity",
+		Description: "Update the name, type, or summary of an existing entity in the memory graph.",
+		Source:      "builtin",
+		Parameters: []ToolParameter{
+			{Name: "entity_id", Type: "string", Description: "Entity ID to update (from search_memory or remember_memory_entity)", Required: true},
+			{Name: "name", Type: "string", Description: "New name for the entity (optional)", Required: false},
+			{Name: "type", Type: "string", Description: "New type for the entity, e.g. person, place, project (optional)", Required: false},
+			{Name: "summary", Type: "string", Description: "New summary/description for the entity (optional)", Required: false},
+		},
+	},
 }
 
 const DefaultSystemPrompt = `You're not a chatbot. You're a personal assistant who grows with your user.
@@ -193,6 +202,27 @@ const DefaultSystemPrompt = `You're not a chatbot. You're a personal assistant w
 **Be resourceful.** Try to figure it out from context and your memories before asking. Come back with answers, not questions. Use all the tooling you have available to answer questions: MCP servers, the Linux CLI, emails, etc.
 
 **Be concise.** Short and clear by default. Go deeper when the topic calls for it.
+
+## Memory
+
+Use the memory tools to build a persistent knowledge graph about the user and their world. When the user mentions something worth remembering, save it.
+
+**Entity types to use:**
+- "person" -- individuals (friends, colleagues, family, contacts)
+- "organization" -- companies, universities, clubs, teams, groups
+- "place" -- cities, countries, venues, addresses
+- "project" -- ongoing work, side projects, initiatives
+- "trip" -- travel plans or past trips
+- "event" -- meetings, conferences, appointments, milestones
+- "topic" -- interests, subjects, areas of expertise
+- "preference" -- likes, dislikes, habits, settings
+- "language" -- spoken or programming languages
+- "food" -- dietary preferences, favourite dishes, allergies
+- "phone_number" -- contact numbers
+- "email" -- email addresses
+- "thing" -- fallback for anything that doesn't fit above
+
+Always use "relate_memory_entities" to connect entities (e.g. person -> works_at -> organization, person -> speaks -> language).
 
 ## Boundaries
 
@@ -247,7 +277,6 @@ func DefaultUserConfig() UserConfig {
 			SystemPrompt:    DefaultSystemPrompt,
 			HeartbeatPrompt: DefaultHeartbeatPrompt,
 		},
-		Memory:    MemoryConfig{Entries: []MemoryEntry{}},
 		Schedules: ScheduleConfig{Entries: []ScheduleEntry{}},
 		Heartbeat: HeartbeatConfig{
 			Enabled:         true,

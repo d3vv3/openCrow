@@ -153,25 +153,29 @@ func (s *Server) buildSystemPrompt(ctx context.Context, userID string, cfg *conf
 		sb.WriteString(fmt.Sprintf("Default to the user's local timezone `%s` when discussing current time or date unless the user explicitly asks for a different timezone.\n", preferredTZ))
 	}
 
-	memories, _ := s.listMemories(ctx, userID)
-	if len(memories) > 0 {
-		sb.WriteString("\n\n## Your Memories\n")
-		sb.WriteString("The following are things you have learned about the user. Use them to personalise your responses:\n\n")
-
-		// Group by category
-		byCategory := make(map[string][]MemoryDTO)
-		order := []string{}
-		for _, m := range memories {
-			cat := m.Category
-			if _, seen := byCategory[cat]; !seen {
-				order = append(order, cat)
-			}
-			byCategory[cat] = append(byCategory[cat], m)
+	// Append memory graph context (entities + relations)
+	if graph, err := s.getFullMemoryGraph(ctx, userID); err == nil && len(graph.Entities) > 0 {
+		sb.WriteString("\n\n## Memory Graph\n")
+		sb.WriteString("Structured knowledge about the user and their world. Use this to personalise responses:\n\n")
+		// Index relations by entity
+		relsByEntity := map[string][]MemoryRelation{}
+		for _, r := range graph.Relations {
+			relsByEntity[r.FromEntityID] = append(relsByEntity[r.FromEntityID], r)
 		}
-		for _, cat := range order {
-			sb.WriteString(fmt.Sprintf("### %s\n", cat))
-			for _, m := range byCategory[cat] {
-				sb.WriteString(fmt.Sprintf("- [%s] %s\n", m.ID, m.Content))
+		limit := 30
+		for i, e := range graph.Entities {
+			if i >= limit {
+				break
+			}
+			line := fmt.Sprintf("- [%s] **%s** (%s)", e.ID, e.Name, e.Type)
+			if e.Summary != "" {
+				line += ": " + e.Summary
+			}
+			sb.WriteString(line + "\n")
+			for _, r := range relsByEntity[e.ID] {
+				if r.Confidence >= 0.3 {
+					sb.WriteString(fmt.Sprintf("  - --%s--> %s (%.0f%%)\n", r.Relation, r.ToEntityName, r.Confidence*100))
+				}
 			}
 		}
 	}

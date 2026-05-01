@@ -249,61 +249,6 @@ func TestToolSendNotification_MissingFields(t *testing.T) {
 	}
 }
 
-func TestToolStoreMemory_MissingContent(t *testing.T) {
-	s := &Server{}
-	result, err := s.toolStoreMemory(context.TODO(), "u1", map[string]any{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result["success"] != false {
-		t.Error("expected failure without content")
-	}
-}
-
-func TestToolForgetMemory_MissingID(t *testing.T) {
-	s := &Server{}
-	result, err := s.toolForgetMemory(context.TODO(), "u1", map[string]any{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result["success"] != false {
-		t.Error("expected failure without memoryId")
-	}
-}
-
-func TestToolLearnMemory_MissingContent(t *testing.T) {
-	s := &Server{}
-	result, err := s.toolLearnMemory(context.TODO(), "u1", map[string]any{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result["success"] != false {
-		t.Error("expected failure without content")
-	}
-}
-
-func TestToolReinforceMemory_MissingID(t *testing.T) {
-	s := &Server{}
-	result, err := s.toolReinforceMemory(context.TODO(), "u1", map[string]any{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result["success"] != false {
-		t.Error("expected failure without memoryId")
-	}
-}
-
-func TestToolPromoteLearning_MissingID(t *testing.T) {
-	s := &Server{}
-	result, err := s.toolPromoteLearning(context.TODO(), "u1", map[string]any{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result["success"] != false {
-		t.Error("expected failure without memoryId")
-	}
-}
-
 func TestToolScheduleTask_MissingFields(t *testing.T) {
 	s := &Server{}
 	result, err := s.toolScheduleTask(context.TODO(), "u1", map[string]any{})
@@ -408,15 +353,118 @@ func TestToolResultError(t *testing.T) {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				return
-			}
-			if err == nil {
-				t.Fatalf("expected error %q", tt.want)
-			}
-			if err.Error() != tt.want {
-				t.Fatalf("error = %q, want %q", err.Error(), tt.want)
+			} else {
+				if err == nil || err.Error() != tt.want {
+					t.Fatalf("error = %v, want %q", err, tt.want)
+				}
 			}
 		})
+	}
+}
+
+// ── Memory Graph Tool Validation Tests ──────────────────────────────
+
+func TestToolRememberEntity_MissingName(t *testing.T) {
+	s := &Server{}
+	result, err := s.toolRememberEntity(context.Background(), "u1", map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != false {
+		t.Error("expected failure without name")
+	}
+}
+
+func TestToolRelateEntities_MissingArgs(t *testing.T) {
+	s := &Server{}
+	result, err := s.toolRelateEntities(context.Background(), "u1", map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != false {
+		t.Error("expected failure without args")
+	}
+
+	// missing to_name
+	result, err = s.toolRelateEntities(context.Background(), "u1", map[string]any{"from_name": "Alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != false {
+		t.Error("expected failure without to_name")
+	}
+
+	// missing relation
+	result, err = s.toolRelateEntities(context.Background(), "u1", map[string]any{"from_name": "Alice", "to_name": "Bob"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != false {
+		t.Error("expected failure without relation")
+	}
+}
+
+func TestToolSearchMemory_MissingQuery(t *testing.T) {
+	s := &Server{}
+	result, err := s.toolSearchMemory(context.Background(), "u1", map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != false {
+		t.Error("expected failure without query")
+	}
+}
+
+func TestToolForgetEntity_MissingID(t *testing.T) {
+	s := &Server{}
+	result, err := s.toolForgetEntity(context.Background(), "u1", map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != false {
+		t.Error("expected failure without entity_id")
+	}
+}
+
+func TestToolEditEntity_MissingID(t *testing.T) {
+	s := &Server{}
+	result, err := s.toolEditEntity(context.Background(), "u1", map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != false {
+		t.Error("expected failure without entity_id")
+	}
+}
+
+func TestBuiltinToolNames_IncludesMemoryTools(t *testing.T) {
+	tools := []string{"remember_memory_entity", "relate_memory_entities", "search_memory", "forget_memory_entity", "edit_memory_entity"}
+	for _, name := range tools {
+		if !isBuiltinToolName(name) {
+			t.Errorf("expected %q to be recognized as builtin", name)
+		}
+	}
+	// Old names must NOT be recognized
+	old := []string{"remember_entity", "relate_entities", "forget_entity", "edit_entity", "learn_memory", "store_memory", "read_memory"}
+	for _, name := range old {
+		if isBuiltinToolName(name) {
+			t.Errorf("old name %q should NOT be recognized as builtin", name)
+		}
+	}
+}
+
+func TestExecuteTool_DispatchNewMemoryNames(t *testing.T) {
+	s := &Server{}
+	names := []string{"remember_memory_entity", "relate_memory_entities", "search_memory", "forget_memory_entity", "edit_memory_entity"}
+	for _, name := range names {
+		r, _ := s.executeTool(context.Background(), "u1", name, map[string]any{})
+		m, _ := r.(map[string]any)
+		// Unknown tools return "unknown tool: ..." in result, not error
+		if m != nil && len(m) == 2 {
+			if errMsg, _ := m["error"].(string); errMsg != "" && strings.HasPrefix(errMsg, "unknown tool:") {
+				t.Errorf("tool %q not dispatched", name)
+			}
+		}
 	}
 }
 

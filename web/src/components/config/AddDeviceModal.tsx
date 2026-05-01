@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import QRCode from "react-qr-code";
-import { endpoints } from "@/lib/api";
+import { endpoints, ApiError } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { UserConfig, DeviceRegistration } from "@/lib/api";
@@ -16,13 +16,13 @@ function AnimatedCheckmark() {
         height="72"
         viewBox="0 0 72 72"
         fill="none"
-        className="animate-in zoom-in duration-300"
+        className="animate-in zoom-in duration-300 text-green-500 dark:text-green-400"
       >
         <circle
           cx="36"
           cy="36"
           r="33"
-          stroke="#22c55e"
+          stroke="currentColor"
           strokeWidth="3"
           fill="none"
           className="opacity-20"
@@ -31,7 +31,7 @@ function AnimatedCheckmark() {
           cx="36"
           cy="36"
           r="33"
-          stroke="#22c55e"
+          stroke="currentColor"
           strokeWidth="3"
           fill="none"
           strokeDasharray="207"
@@ -41,7 +41,7 @@ function AnimatedCheckmark() {
         />
         <polyline
           points="21,37 31,47 51,27"
-          stroke="#22c55e"
+          stroke="currentColor"
           strokeWidth="4"
           fill="none"
           strokeLinecap="round"
@@ -79,8 +79,10 @@ export function AddDeviceModal({
   const [generating, setGenerating] = useState(false);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [pairedRegistration, setPairedRegistration] = useState<DeviceRegistration | null>(null);
   const [qrZoomed, setQrZoomed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Start polling for device registration once QR is shown
@@ -112,10 +114,20 @@ export function AddDeviceModal({
     const trimLabel = label.trim() || trimName;
     if (!trimName) return;
     setGenerating(true);
+    setError(null);
     try {
       const res = await endpoints.createDeviceTokens(trimLabel);
+      // Extract session ID from the access token payload (it's the `sid` claim).
+      let sid: string | null = null;
+      try {
+        const payload = JSON.parse(atob(res.tokens.accessToken.split(".")[1]));
+        sid = payload.sid ?? null;
+      } catch {
+        // ignore -- session cleanup on cancel will be best-effort
+      }
       const newDeviceId = "dev_" + Math.random().toString(36).substring(2, 9);
       setDeviceId(newDeviceId);
+      setSessionId(sid);
       setQrPayload(
         JSON.stringify({
           id: newDeviceId,
@@ -131,6 +143,13 @@ export function AddDeviceModal({
         return c;
       });
     } catch (e) {
+      if (e instanceof ApiError && e.status === 429) {
+        setError(
+          "Session limit reached. Please delete an existing device before pairing a new one.",
+        );
+      } else {
+        setError("Failed to generate pairing QR. Please try again.");
+      }
       console.error(e);
     } finally {
       setGenerating(false);
@@ -139,6 +158,10 @@ export function AddDeviceModal({
 
   const handleClose = () => {
     if (pollRef.current) clearInterval(pollRef.current);
+    // If a session was created but the device never paired, delete the orphan session.
+    if (sessionId && !pairedRegistration) {
+      endpoints.deleteSession(sessionId).catch(() => {});
+    }
     onClose();
   };
 
@@ -184,6 +207,11 @@ export function AddDeviceModal({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. pixel8"
             />
+            {error && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
             <Button
               variant="primary"
               className="w-full"
@@ -199,7 +227,9 @@ export function AddDeviceModal({
           <div className="flex flex-col items-center gap-5 animate-in fade-in duration-300">
             <AnimatedCheckmark />
             <div className="text-center">
-              <p className="text-green-400 font-semibold text-base">Device paired!</p>
+              <p className="text-green-600 dark:text-green-400 font-semibold text-base">
+                Device paired!
+              </p>
               <p className="text-sm text-on-surface-variant mt-1">
                 {label || name} is now connected with{" "}
                 <span className="text-on-surface font-medium">
@@ -212,7 +242,7 @@ export function AddDeviceModal({
             <button
               onClick={() => setQrZoomed((z) => !z)}
               title="Toggle QR size"
-              className="bg-white p-3 rounded-xl shadow-[0_0_0_2px_#22c55e55] transition-all duration-300 cursor-pointer hover:shadow-[0_0_0_3px_#22c55e88]"
+              className="bg-white p-3 rounded-xl shadow-[0_0_0_2px_theme(colors.green.500/0.33)] transition-all duration-300 cursor-pointer hover:shadow-[0_0_0_3px_theme(colors.green.500/0.53)]"
             >
               <QRCode value={qrPayload} size={qrZoomed ? 220 : 120} />
             </button>
@@ -222,7 +252,7 @@ export function AddDeviceModal({
                 {pairedRegistration.capabilities.map((cap) => (
                   <span
                     key={cap.name}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20"
+                    className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30 dark:border-green-500/20"
                   >
                     {cap.name}
                   </span>

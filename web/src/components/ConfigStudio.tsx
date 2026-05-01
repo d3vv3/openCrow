@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { ReactElement } from "react";
-import {
-  endpoints,
-  type UserConfig,
-  type SkillFile,
-  type MemoryEntry,
-  type TaskDTO,
-} from "@/lib/api";
+import { endpoints, type UserConfig, type SkillFile, type TaskDTO } from "@/lib/api";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   TABS,
@@ -24,7 +18,6 @@ import {
   ProvidersTab,
   McpTab,
   SoulTab,
-  MemoryTab,
   HeartbeatTab,
   VoiceTab,
 } from "@/components/config";
@@ -36,7 +29,6 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [providerStatuses, setProviderStatuses] = useState<Record<string, ProviderProbeStatus>>({});
-  const [initialMemories, setInitialMemories] = useState<MemoryEntry[]>([]);
   const [initialSkillFiles, setInitialSkillFiles] = useState<SkillFile[]>([]);
   const [tasks, setTasks] = useState<TaskDTO[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
@@ -60,16 +52,6 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
             }
             setProviderStatuses(map);
           })
-          .catch(() => {});
-
-        endpoints
-          .listMemories()
-          .then((res) => setInitialMemories(res.memories ?? []))
-          .catch(() => {});
-
-        endpoints
-          .listTasks()
-          .then((res) => setTasks(res.tasks ?? []))
           .catch(() => {});
 
         endpoints
@@ -246,7 +228,6 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
     ),
     mcp: () => <McpTab config={config} updateConfig={updateConfig} {...commonSave} />,
     soul: () => <SoulTab config={config} updateConfig={updateConfig} {...commonSave} />,
-    memory: () => <MemoryTab initialMemories={initialMemories} onError={(msg) => setError(msg)} />,
     schedules: () => (
       <SchedulesTab
         tasks={tasks}

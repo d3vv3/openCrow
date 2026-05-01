@@ -24,7 +24,9 @@ export type {
   SkillEntry,
   SkillFile,
   InstallSkillsResult,
-  MemoryEntry,
+  MemoryGraph,
+  MemoryEntity,
+  MemoryRelation,
   TaskDTO,
   ScheduleEntry,
   HeartbeatConfig,
@@ -47,6 +49,7 @@ export type {
   CompanionAppConfig,
   DeviceCapability,
   DeviceRegistration,
+  DeviceSession,
 } from "./api-types";
 
 import type {
@@ -62,7 +65,7 @@ import type {
   TokenUsage,
   SkillFile,
   InstallSkillsResult,
-  MemoryEntry,
+  MemoryGraph,
   TaskDTO,
   HeartbeatConfig,
   HeartbeatEventDTO,
@@ -80,6 +83,7 @@ import type {
   CompleteDeviceTaskRequest,
   DeviceCapability,
   DeviceRegistration,
+  DeviceSession,
   CreateMessageAttachmentRequest,
 } from "./api-types";
 
@@ -325,9 +329,6 @@ function normalizeUserConfig(raw: ServerUserConfig): UserConfig {
     prompts: {
       systemPrompt: raw?.prompts?.systemPrompt ?? "",
       heartbeatPrompt: raw?.prompts?.heartbeatPrompt ?? "",
-    },
-    memory: {
-      entries: Array.isArray(raw?.memory?.entries) ? raw.memory!.entries : [],
     },
     schedules: {
       entries: (raw?.schedules?.entries ?? []).map((entry) => ({
@@ -708,10 +709,10 @@ export const endpoints = {
     }),
 
   // Memory
-  listMemories: () => api<{ memories: MemoryEntry[] }>("/v1/memory"),
-  createMemory: (entry: Omit<MemoryEntry, "id">) =>
-    api<MemoryEntry>("/v1/memory", { method: "POST", body: JSON.stringify(entry) }),
-  deleteMemory: (id: string) => api(`/v1/memory/${id}`, { method: "DELETE" }),
+  // Memory Graph
+  getMemoryGraph: () => api<MemoryGraph>("/v1/memory/graph"),
+  deleteMemoryEntity: (id: string) => api(`/v1/memory/entities/${id}`, { method: "DELETE" }),
+  deleteMemoryRelation: (id: string) => api(`/v1/memory/relations/${id}`, { method: "DELETE" }),
 
   // Email test
   testEmailConnection: (params: {
@@ -834,6 +835,8 @@ export const endpoints = {
 
   // Device Pairing
   deleteDevice: (deviceId: string) => api(`/v1/devices/${deviceId}`, { method: "DELETE" }),
+  deleteSession: (sessionId: string) => api(`/v1/sessions/${sessionId}`, { method: "DELETE" }),
+  listSessions: () => api<{ sessions: DeviceSession[] }>("/v1/sessions"),
   createDeviceTokens: (deviceLabel: string) =>
     api<{ tokens: { accessToken: string; refreshToken: string } }>("/v1/auth/device-tokens", {
       method: "POST",

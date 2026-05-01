@@ -6,9 +6,11 @@ import ChatShell from "@/components/ChatShell";
 import ConfigStudio from "@/components/ConfigStudio";
 import OverviewView from "@/components/OverviewView";
 import TerminalView from "@/components/TerminalView";
+import { MemoryGraphTab } from "@/components/config/MemoryGraphTab";
 import {
   ChatIcon,
   LogoutIcon,
+  MemoryIcon,
   OverviewIcon,
   TerminalIcon,
   ToolIcon,
@@ -16,7 +18,7 @@ import {
 } from "@/components/ui/icons";
 import { clearTokens, endpoints, type ConversationDTO } from "@/lib/api";
 
-type Section = "chat" | "config" | "overview" | "terminal";
+type Section = "chat" | "config" | "overview" | "terminal" | "memory";
 
 function automationLabel(kind?: string) {
   switch (kind) {
@@ -152,6 +154,7 @@ export default function AuthenticatedApp({
     config: "Configuration",
     overview: "Overview",
     terminal: "Sandboxed terminal",
+    memory: "Memory Graph",
   };
 
   const visibleConversations = (
@@ -363,14 +366,10 @@ export default function AuthenticatedApp({
                               setConversations((prev) => prev.filter((c) => c.id !== chat.id));
                               if (activeConversationId === chat.id) setActiveConversationId(null);
                             }}
-                            className={`shrink-0 cursor-pointer px-2 py-2 transition-all ${
-                              isAutomatic
-                                ? "text-on-surface-variant/60 opacity-100 group-hover:text-error"
-                                : "text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-red-400"
-                            }`}
+                            className="shrink-0 cursor-pointer p-1 mr-4 text-on-surface-variant/50 opacity-0 group-hover:opacity-100 hover:text-error transition-all"
                             title="Delete conversation"
                           >
-                            <TrashIcon />
+                            <TrashIcon width="16" height="16" />
                           </button>
                         </div>
                       );
@@ -390,7 +389,7 @@ export default function AuthenticatedApp({
                       const next = !prev;
                       try {
                         localStorage.setItem("showSystemChats", String(next));
-                      } catch (_e) {
+                      } catch {
                         /* localStorage unavailable */
                       }
                       if (!next && activeConversationId) {
@@ -419,6 +418,15 @@ export default function AuthenticatedApp({
               section="overview"
               icon={<OverviewIcon />}
               label="Overview"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+              setRequestedConfigTab={setRequestedConfigTab}
+              onNavigate={closeSidebar}
+            />
+            <SidebarNavButton
+              section="memory"
+              icon={<MemoryIcon />}
+              label="Memory Graph"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
               setRequestedConfigTab={setRequestedConfigTab}
@@ -502,6 +510,13 @@ export default function AuthenticatedApp({
             className="flex-1 overflow-hidden p-8 flex flex-col animate-in fade-in slide-in-from-bottom-3 duration-300"
           >
             <TerminalView />
+          </div>
+        ) : activeSection === "memory" ? (
+          <div
+            key="memory"
+            className="flex-1 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300"
+          >
+            <MemoryGraphTab />
           </div>
         ) : activeSection === "config" ? (
           <div

@@ -6,7 +6,6 @@ import type {
   GolangToolEntry,
   ProviderConfig,
   SkillEntry,
-  MemoryEntry,
   ScheduleEntry,
   MCPServerConfig,
   DAVConfig,
@@ -30,7 +29,6 @@ export const TABS = [
   { key: "mcp", label: "MCP" },
   { key: "providers", label: "Providers" },
   { key: "soul", label: "Soul" },
-  { key: "memory", label: "Memory" },
   { key: "schedules", label: "Schedules" },
   { key: "heartbeat", label: "Heartbeat" },
   { key: "voice", label: "Voice" },
@@ -119,12 +117,6 @@ export const emptySkill: SkillEntry = {
   description: "",
   content: "",
   enabled: true,
-};
-
-export const emptyMemory: MemoryEntry = {
-  category: "",
-  content: "",
-  confidence: 50,
 };
 
 export const emptySchedule: ScheduleEntry = {

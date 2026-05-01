@@ -192,6 +192,30 @@ func (s *Server) handleCreateDeviceTask(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, dto)
 }
 
+// @Summary Get a single device task by ID
+// @Tags    devices
+// @Security BearerAuth
+// @Produce json
+// @Param   id path string true "Task ID"
+// @Success 200 {object} DeviceTaskDTO
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router  /v1/devices/tasks/{id} [get]
+func (s *Server) handleGetDeviceTask(w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromContext(r.Context())
+	taskID := r.PathValue("id")
+	if taskID == "" {
+		writeError(w, http.StatusBadRequest, "task id is required")
+		return
+	}
+	dto, err := s.getDeviceTask(r.Context(), userID, taskID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "task not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, dto)
+}
+
 // @Summary Mark a device task as complete
 // @Tags    devices
 // @Security BearerAuth

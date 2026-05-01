@@ -100,6 +100,41 @@ ORDER BY created_at DESC;
 	return tasks, nil
 }
 
+func (s *Server) getDeviceTask(ctx context.Context, userID, taskID string) (DeviceTaskDTO, error) {
+	var dto DeviceTaskDTO
+	var resultOutput *string
+	var createdAt, updatedAt time.Time
+	var expiresAt *time.Time
+	var rawArgs []byte
+
+	err := s.db.QueryRow(ctx, `
+SELECT id, target_device, instruction, tool_name, tool_arguments, status, result_output, created_at, updated_at, expires_at
+FROM device_tasks
+WHERE id = $1 AND user_id = $2;
+`, taskID, userID).Scan(
+		&dto.ID, &dto.TargetDevice, &dto.Instruction, &dto.ToolName, &rawArgs, &dto.Status,
+		&resultOutput, &createdAt, &updatedAt, &expiresAt,
+	)
+	if err != nil {
+		return dto, fmt.Errorf("get device task: %w", err)
+	}
+
+	dto.ResultOutput = resultOutput
+	dto.CreatedAt = createdAt.Format(time.RFC3339)
+	dto.UpdatedAt = updatedAt.Format(time.RFC3339)
+	if expiresAt != nil {
+		exp := expiresAt.Format(time.RFC3339)
+		dto.ExpiresAt = &exp
+	}
+	if rawArgs != nil {
+		var m map[string]any
+		if err := json.Unmarshal(rawArgs, &m); err == nil {
+			dto.ToolArguments = m
+		}
+	}
+	return dto, nil
+}
+
 func (s *Server) deleteDeviceTask(ctx context.Context, userID, taskID string) error {
 	res, err := s.db.Exec(ctx, "DELETE FROM device_tasks WHERE id = $1 AND user_id = $2;", taskID, userID)
 	if err != nil {
