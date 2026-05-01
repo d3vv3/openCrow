@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { MemoryGraph, MemoryEntity, MemoryRelation } from "@/lib/api";
 import { endpoints } from "@/lib/api";
@@ -102,6 +102,7 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
   const [selected, setSelected] = useState<MemoryEntity | null>(null);
   const [selectedRelations, setSelectedRelations] = useState<MemoryRelation[]>([]);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const graphRef = useRef<any>(null); // ForceGraphMethods API includes runtime-only renderer()
@@ -176,23 +177,27 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
   const clearFilters = () => setActiveFilters(new Set());
 
   // Compute node degrees for centrality-based sizing
-  const nodeDegrees = new Map<string, number>();
-  for (const r of graph?.relations ?? []) {
-    nodeDegrees.set(r.from_entity_id, (nodeDegrees.get(r.from_entity_id) ?? 0) + 1);
-    nodeDegrees.set(r.to_entity_id, (nodeDegrees.get(r.to_entity_id) ?? 0) + 1);
-  }
+  const nodeDegrees = useMemo(() => {
+    const degrees = new Map<string, number>();
+    for (const r of graph?.relations ?? []) {
+      degrees.set(r.from_entity_id, (degrees.get(r.from_entity_id) ?? 0) + 1);
+      degrees.set(r.to_entity_id, (degrees.get(r.to_entity_id) ?? 0) + 1);
+    }
+    return degrees;
+  }, [graph?.relations]);
 
-  const allNodes: NodeObject[] = (graph?.entities ?? []).map((e) => {
-    const degree = nodeDegrees.get(e.id) ?? 0;
-    return {
-      id: e.id,
-      name: e.name,
-      type: e.type,
-      summary: e.summary ?? "",
-      val: Math.max(2, Math.min(12, 2 + degree * 1.2)),
-      color: getColor(e.type),
-    };
-  });
+  const allNodes = useMemo(
+    () =>
+      (graph?.entities ?? []).map((e) => ({
+        id: e.id,
+        name: e.name,
+        type: e.type,
+        summary: e.summary ?? "",
+        val: Math.max(2, Math.min(12, 2 + (nodeDegrees.get(e.id) ?? 0) * 1.2)),
+        color: getColor(e.type),
+      })),
+    [graph?.entities, nodeDegrees],
+  );
 
   const presentTypes = Array.from(
     new Set([...Object.keys(TYPE_COLORS), ...allNodes.map((n) => n.type.toLowerCase())]),
@@ -200,26 +205,44 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
 
   // Filter nodes: if no filters active, show all
   const isFiltered = activeFilters.size > 0;
-  const nodes = isFiltered
-    ? allNodes.filter((n) => activeFilters.has(n.type.toLowerCase()))
-    : allNodes;
+  const nodes = useMemo(
+    () => (isFiltered ? allNodes.filter((n) => activeFilters.has(n.type.toLowerCase())) : allNodes),
+    [allNodes, isFiltered, activeFilters],
+  );
 
   const visibleNodeIds = new Set(nodes.map((n) => n.id));
 
-  const allLinks: LinkObject[] = (graph?.relations ?? []).map((r) => ({
-    id: r.id,
-    source: r.from_entity_id,
-    target: r.to_entity_id,
-    relation: r.relation,
-    confidence: r.confidence,
-  }));
+  const links = useMemo(() => {
+    const allLinks: LinkObject[] = (graph?.relations ?? []).map((r) => ({
+      id: r.id,
+      source: r.from_entity_id,
+      target: r.to_entity_id,
+      relation: r.relation,
+      confidence: r.confidence,
+    }));
+    return isFiltered
+      ? allLinks.filter(
+          (l) => visibleNodeIds.has(l.source as string) && visibleNodeIds.has(l.target as string),
+        )
+      : allLinks;
+  }, [graph?.relations, isFiltered, visibleNodeIds]);
 
-  // Only show links where both endpoints are visible
-  const links = isFiltered
-    ? allLinks.filter(
-        (l) => visibleNodeIds.has(l.source as string) && visibleNodeIds.has(l.target as string),
-      )
-    : allLinks;
+  // Compute neighbour sets for hover highlighting
+  const hoveredNeighbourIds = new Set<string>();
+  const hoveredLinkIds = new Set<string>();
+  if (hoveredNodeId) {
+    hoveredNeighbourIds.add(hoveredNodeId);
+    for (const l of links) {
+      const src = (l.source as NodeObject).id ?? (l.source as string);
+      const tgt = (l.target as NodeObject).id ?? (l.target as string);
+      if (src === hoveredNodeId || tgt === hoveredNodeId) {
+        hoveredNeighbourIds.add(src);
+        hoveredNeighbourIds.add(tgt);
+        hoveredLinkIds.add(l.id);
+      }
+    }
+  }
+  const hasHover = hoveredNodeId !== null;
 
   // Fix canvas resolution for high-DPI displays (runs after graph renders)
   useEffect(() => {
@@ -265,6 +288,8 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
     );
     setSelectedRelations(rels);
   };
+
+  const graphData = useMemo(() => ({ nodes, links }), [nodes, links]);
 
   const isEmpty = !loading && (!graph?.entities || graph.entities.length === 0);
 
@@ -332,41 +357,89 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
             <ForceGraph2D
               key={graphKey}
               ref={graphRef}
-              graphData={{ nodes, links }}
+              graphData={graphData}
               width={dimensions.width}
               height={dimensions.height}
               nodeLabel={(n) => {
                 const node = n as NodeObject;
                 return `${node.name} (${node.type})${node.summary ? "\n" + node.summary : ""}`;
               }}
-              nodeColor={(n) => (n as NodeObject).color ?? "#94a3b8"}
+              nodeColor={(n) => "transparent"}
               nodeVal={(n) => (n as NodeObject).val ?? 4}
               linkLabel={(l) => {
                 const link = l as LinkObject;
                 return `${link.relation} (${Math.round(link.confidence * 100)}%)`;
               }}
-              linkWidth={(l) => Math.max(0.5, (l as LinkObject).confidence * 3)}
-              linkColor={() => "rgba(148,163,184,0.4)"}
-              linkDirectionalArrowLength={4}
+              linkWidth={(l) => {
+                const link = l as LinkObject;
+                if (!hasHover) return Math.max(0.5, link.confidence * 3);
+                return hoveredLinkIds.has(link.id) ? Math.max(1.5, link.confidence * 5) : 0.3;
+              }}
+              linkColor={(l) => {
+                const link = l as LinkObject;
+                if (!hasHover) return "rgba(148,163,184,0.4)";
+                if (!hoveredLinkIds.has(link.id)) return "rgba(148,163,184,0.06)";
+                // Color with the connected node's color
+                const src = link.source as NodeObject;
+                const tgt = link.target as NodeObject;
+                const other = src.id === hoveredNodeId ? tgt : src;
+                return (other as NodeObject).color ?? "#94a3b8";
+              }}
+              linkDirectionalArrowLength={hasHover ? 0 : 4}
               linkDirectionalArrowRelPos={1}
+              onNodeHover={(n) => setHoveredNodeId(n ? (n as NodeObject).id : null)}
               onNodeClick={(n) => handleNodeClick(n as NodeObject)}
               backgroundColor="transparent"
-              nodeCanvasObjectMode={() => "after"}
+              nodeCanvasObjectMode={() => "replace"}
               nodeCanvasObject={(node, ctx, globalScale) => {
                 const n = node as NodeObject;
+                const baseColor = n.color ?? "#94a3b8";
+                const isNeighbour = !hasHover || hoveredNeighbourIds.has(n.id);
+                const isHovered = n.id === hoveredNodeId;
+                const nodeVal = n.val ?? 4;
+
+                // Dynamically adjust node size: bigger when highlighted, smaller when compacted
+                let radius = nodeVal * 1.3;
+                if (hasHover) {
+                  if (isHovered) radius = nodeVal * 2.2;
+                  else if (isNeighbour) radius = nodeVal * 1.6;
+                  else radius = nodeVal * 0.7;
+                }
+
+                const x = n.x ?? 0;
+                const y = n.y ?? 0;
+
+                // Glow for hovered and connected nodes
+                if (hasHover && isNeighbour) {
+                  ctx.save();
+                  ctx.shadowColor = baseColor;
+                  ctx.shadowBlur = isHovered ? 20 : 12;
+                  ctx.beginPath();
+                  ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                  ctx.fillStyle = baseColor;
+                  ctx.globalAlpha = 0.5;
+                  ctx.fill();
+                  ctx.restore();
+                }
+
+                // Node circle
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = isNeighbour ? baseColor : "rgba(148,163,184,0.15)";
+                ctx.fill();
+
+                // Label
                 const maxLen = 20;
                 const label = n.name.length > maxLen ? n.name.slice(0, maxLen - 1) + "..." : n.name;
                 const fontSize = Math.max(8, Math.min(13, 11 / globalScale));
                 ctx.font = `600 ${fontSize}px sans-serif`;
                 ctx.textAlign = "center";
                 ctx.textBaseline = "top";
-                const textX = n.x ?? 0;
-                const textY = (n.y ?? 0) + 8;
                 const isDark =
                   typeof window !== "undefined" &&
                   window.matchMedia("(prefers-color-scheme: dark)").matches;
                 ctx.fillStyle = isDark ? "#ffffff" : "#1e293b";
-                ctx.fillText(label, textX, textY);
+                ctx.fillText(label, x, y + radius + 4);
               }}
             />
           )}
