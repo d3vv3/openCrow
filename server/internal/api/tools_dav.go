@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/emersion/go-webdav/caldav"
 	"github.com/emersion/go-webdav/carddav"
@@ -271,13 +270,13 @@ func (s *Server) toolCreateCalDAVEvent(ctx context.Context, userID string, args 
 	}
 	startsAtRaw, _ := args["starts_at"].(string)
 	endsAtRaw, _ := args["ends_at"].(string)
-	startsAt, err := time.Parse(time.RFC3339, strings.TrimSpace(startsAtRaw))
-	if err != nil {
-		return map[string]any{"success": false, "error": "starts_at must be RFC3339"}, nil
+	startsAt, hasStart, err := parseOptionalRFC3339(startsAtRaw)
+	if err != nil || !hasStart {
+		return map[string]any{"success": false, "error": "starts_at is required. Use RFC3339 (e.g. \"2025-05-02T09:00:00Z\"), datetime without timezone (\"2025-05-02T09:00:00\"), or date-only (\"2025-05-02\")."}, nil
 	}
-	endsAt, err := time.Parse(time.RFC3339, strings.TrimSpace(endsAtRaw))
-	if err != nil {
-		return map[string]any{"success": false, "error": "ends_at must be RFC3339"}, nil
+	endsAt, hasEnd, err := parseOptionalRFC3339(endsAtRaw)
+	if err != nil || !hasEnd {
+		return map[string]any{"success": false, "error": "ends_at is required. Use RFC3339 (e.g. \"2025-05-02T10:00:00Z\"), datetime without timezone (\"2025-05-02T10:00:00\"), or date-only (\"2025-05-02\")."}, nil
 	}
 	if !endsAt.After(startsAt) {
 		return map[string]any{"success": false, "error": "ends_at must be after starts_at"}, nil

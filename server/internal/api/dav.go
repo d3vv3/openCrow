@@ -529,16 +529,28 @@ func normalizeDAVIDFromArgs(args map[string]any) string {
 	return ""
 }
 
+// parseOptionalRFC3339 parses a datetime string that may be absent/empty.
+// Accepts RFC3339 ("2025-05-02T09:00:00Z"), RFC3339 without timezone
+// ("2025-05-02T09:00:00" -- assumed UTC), and date-only ("2025-05-02" --
+// interpreted as midnight UTC). Returns (zero, false, nil) when raw is empty.
 func parseOptionalRFC3339(raw string) (time.Time, bool, error) {
 	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
+	if trimmed == "" || trimmed == "<nil>" {
 		return time.Time{}, false, nil
 	}
-	t, err := time.Parse(time.RFC3339, trimmed)
-	if err != nil {
-		return time.Time{}, false, err
+	// Try formats in order of specificity.
+	formats := []string{
+		time.RFC3339,           // 2006-01-02T15:04:05Z07:00
+		"2006-01-02T15:04:05", // no timezone -- treat as UTC
+		"2006-01-02T15:04",    // no seconds
+		"2006-01-02",          // date only -- midnight UTC
 	}
-	return t, true, nil
+	for _, f := range formats {
+		if t, err := time.Parse(f, trimmed); err == nil {
+			return t.UTC(), true, nil
+		}
+	}
+	return time.Time{}, false, fmt.Errorf("unrecognised datetime %q: use RFC3339 e.g. 2025-05-02T09:00:00Z", trimmed)
 }
 
 func parseLimit(args map[string]any, key string, fallback, max int) int {
