@@ -12,13 +12,16 @@ export interface AppStore {
   /** Active conversation ID for the persistent ChatShell instance. */
   activeChatId: string | null;
   setActiveChatId: (id: string | null) => void;
+  conversationsLoading: boolean;
+  setConversationsLoading: (loading: boolean) => void;
+  /** Set to true while a message send/stream is in flight so polling backs off. */
+  chatBusy: boolean;
+  setChatBusy: (busy: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
   conversations: [],
   setConversations: (list) => set({ conversations: list }),
-  activeChatId: null,
-  setActiveChatId: (id) => set({ activeChatId: id }),
   showSystemChats: (() => {
     try {
       return localStorage.getItem("showSystemChats") === "true";
@@ -34,4 +37,10 @@ export const useAppStore = create<AppStore>((set) => ({
     }
     set({ showSystemChats: show });
   },
+  activeChatId: null,
+  setActiveChatId: (id) => set({ activeChatId: id }),
+  conversationsLoading: true,
+  setConversationsLoading: (loading) => set({ conversationsLoading: loading }),
+  chatBusy: false,
+  setChatBusy: (busy) => set({ chatBusy: busy }),
 }));

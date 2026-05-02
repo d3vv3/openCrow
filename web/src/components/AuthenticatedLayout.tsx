@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import {
@@ -105,19 +105,43 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   const setShowSystemChats = useAppStore((s) => s.setShowSystemChats);
   const activeChatId = useAppStore((s) => s.activeChatId);
   const setActiveChatId = useAppStore((s) => s.setActiveChatId);
+  const conversationsLoading = useAppStore((s) => s.conversationsLoading);
+  const setConversationsLoading = useAppStore((s) => s.setConversationsLoading);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const version = getOpenCrowVersion();
-
-  // Fetch conversations on mount if the store is empty (e.g. user lands on a non-chat page)
+  const chatBusy = useAppStore((s) => s.chatBusy);
+  const chatBusyRef = useRef(false);
   useEffect(() => {
-    if (conversations.length > 0) return;
+    chatBusyRef.current = chatBusy;
+  }, [chatBusy]);
+
+  // ── Single source of truth for conversation list ──
+  // Initial fetch + 5s poll. useChatSession reads from the store instead of fetching itself.
+  useEffect(() => {
+    setConversationsLoading(true);
     endpoints
       .listConversations()
       .then((data) => {
-        if (data) setConversations(data);
+        if (data) {
+          setConversations(data);
+        }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setConversationsLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (chatBusyRef.current) return;
+      endpoints
+        .listConversations()
+        .then((data) => {
+          if (data && data.length > 0) setConversations(data);
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function closeSidebar() {
@@ -235,17 +259,32 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
 
             <div className="flex h-[calc(100%-76px)] flex-col">
               <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-                {conversations.length === 0 && (
+                {conversationsLoading && (
+                  <div className="space-y-2.5 p-0.5">
+                    {Array.from({ length: 5 }).map((_, row) => (
+                      <div key={row} className="relative flex items-center rounded-lg px-3 py-2.5">
+                        <div className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-surface-high" />
+                        <div className="flex-1 min-w-0 flex flex-col gap-2">
+                          <div className="h-4 w-full rounded animate-skeleton" />
+                          <div className="h-3.5 w-[45%] rounded animate-skeleton" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!conversationsLoading && conversations.length === 0 && (
                   <p className="px-2 py-4 text-xs text-on-surface-variant">
                     {showSystemChats ? "No chats yet" : "No user or heartbeat chats yet"}
                   </p>
                 )}
-                {conversations.length > 0 && visibleConversations.length === 0 && (
-                  <p className="px-2 py-4 text-xs text-on-surface-variant">
-                    {showSystemChats ? "No chats yet" : "No user or heartbeat chats yet"}
-                  </p>
-                )}
-                {visibleConversations.length > 0 && (
+                {!conversationsLoading &&
+                  conversations.length > 0 &&
+                  visibleConversations.length === 0 && (
+                    <p className="px-2 py-4 text-xs text-on-surface-variant">
+                      {showSystemChats ? "No chats yet" : "No user or heartbeat chats yet"}
+                    </p>
+                  )}
+                {!conversationsLoading && visibleConversations.length > 0 && (
                   <div className="space-y-1 p-0.5">
                     {visibleConversations.map((chat) => {
                       const isActive =
@@ -449,13 +488,15 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
         {currentPath.startsWith("/chat") && (
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <ChatShell
-              activeConversationId={
-                // Prefer URL-derived id (handles direct navigation / page refresh)
-                // and fall back to store for in-app shallow navigation.
-                currentPath.startsWith("/chat/")
-                  ? ((router.query.id as string) ?? activeChatId)
-                  : activeChatId
-              }
+              activeConversationId={(() => {
+                // router.query.id is undefined on first hydration render in Pages Router.
+                // Parse the id directly from asPath which is always populated.
+                if (currentPath.startsWith("/chat/")) {
+                  const fromPath = router.asPath.split("?")[0].replace(/^\/chat\//, "") || null;
+                  return fromPath ?? activeChatId;
+                }
+                return activeChatId;
+              })()}
               onActiveConversationChange={(id) => {
                 setActiveChatId(id);
                 if (id) {

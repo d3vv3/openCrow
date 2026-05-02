@@ -20,6 +20,7 @@ import {
   toOptimisticAttachments,
   type PickedAttachmentFile,
 } from "./attachments";
+import { useAppStore } from "@/lib/store";
 
 export function useChatSession({
   activeConversationId,
@@ -47,6 +48,8 @@ export function useChatSession({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const setConversationsLoading = useAppStore((s) => s.setConversationsLoading);
+  const setChatBusy = useAppStore((s) => s.setChatBusy);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -72,19 +75,11 @@ export function useChatSession({
     streamingRef.current = streamingMsgId !== null;
   }, [streamingMsgId]);
 
-  // ─── Load conversations on mount ───
+  // ─── Sync conversations from store (layout owns fetching) ───
+  const storeConversations = useAppStore((s) => s.conversations);
   useEffect(() => {
-    setLoadingConvs(true);
-    endpoints
-      .listConversations()
-      .then((data) => {
-        const list = data ?? [];
-        setConversations(list);
-        onConversationsUpdate(list);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingConvs(false));
-  }, [onConversationsUpdate]);
+    setConversations(storeConversations);
+  }, [storeConversations]);
 
   // ─── Load messages when active conversation changes ───
   useEffect(() => {
@@ -125,27 +120,6 @@ export function useChatSession({
       })
       .catch(() => {});
   }, []);
-
-  // ─── Poll conversation list every 5 s (skip while streaming / sending) ───
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (sendingRef.current || streamingRef.current) return;
-      endpoints
-        .listConversations()
-        .then((data) => {
-          const incoming = data ?? [];
-          setConversations((prev) => {
-            // Merge: keep order of incoming (server is source of truth for list),
-            // but don't clobber if incoming is somehow empty while we have messages.
-            if (incoming.length === 0 && prev.length > 0) return prev;
-            return incoming;
-          });
-          onConversationsUpdate(incoming);
-        })
-        .catch(() => {});
-    }, 5000);
-    return () => clearInterval(id);
-  }, [onConversationsUpdate]);
 
   // ─── Poll active conversation messages every 5 s (skip while streaming / sending) ───
   const activeConversationIdRef = useRef<string | null>(null);
@@ -244,6 +218,7 @@ export function useChatSession({
     setAttachedFiles([]);
     if (composeRef.current) composeRef.current.style.height = "36px";
     setSending(true);
+    setChatBusy(true);
 
     const fullContent = userContent;
     const completionMessage = buildCompletionMessage(userContent, currentAttachments);
@@ -399,6 +374,7 @@ export function useChatSession({
       ]);
     } finally {
       setSending(false);
+      setChatBusy(false);
       setStreamingMsgId(null);
       composeRef.current?.focus();
     }

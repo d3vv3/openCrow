@@ -156,8 +156,10 @@ func (s *Server) toolOpenURL(ctx context.Context, args map[string]any) (map[stri
 	}
 
 	content := extractTextContent(string(body))
+	truncated := false
 	if len(content) > 20000 {
 		content = content[:20000] + "..."
+		truncated = true
 	}
 
 	return map[string]any{
@@ -166,5 +168,6 @@ func (s *Server) toolOpenURL(ctx context.Context, args map[string]any) (map[stri
 		"status_code":  resp.StatusCode,
 		"content_type": resp.Header.Get("Content-Type"),
 		"content":      content,
+		"truncated":    truncated,
 	}, nil
 }

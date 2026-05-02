@@ -232,6 +232,7 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 
 	// scheduleableDeviceTools is the set of device tool base-names that make sense
 	// to queue as async device_tasks when no device is actively connected.
+	// Base-names are the raw capability names (no prefix); the LLM sees them as "device_<name>".
 	scheduleableDeviceTools := map[string]bool{
 		"set_alarm":              true,
 		"create_calendar_event":  true,
@@ -239,11 +240,11 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 		"read_calendar":          true,
 		"create_contact":         true,
 		"send_sms":               true,
-		"read_contacts":          true,
+		"search_contacts":        true,
 		"read_call_log":          true,
 		"read_sms":               true,
 		"get_battery":            true,
-		"get_location":           true,
+		"get_device_location":    true,
 		"get_wifi_info":          true,
 		"get_device_info":        true,
 		"list_alarms":            true,
@@ -264,22 +265,26 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 		"web_open":          true,
 	}
 
-	// Inject local tool specs registered by the requesting device
-	localToolNames := map[string]bool{}        // bare name -> true (live execution via SSE)
-	scheduleToolTargets := map[string]string{} // bare name -> target device ID (async scheduling)
-	liveOnlyToolNames := map[string]bool{}     // bare name -> true (requires live device, no scheduling)
+	// Inject local tool specs registered by the requesting device.
+	// Tools are exposed to the LLM with a "device_" prefix to namespace them from
+	// server-side built-in tools (e.g. "device_get_battery" vs "get_battery").
+	// The prefix is stripped before forwarding the call to the companion.
+	localToolNames := map[string]bool{}        // "device_<name>" -> true (live execution via SSE)
+	scheduleToolTargets := map[string]string{} // "device_<name>" -> target device ID (async scheduling)
+	liveOnlyToolNames := map[string]bool{}     // "device_<name>" -> true (requires live device, no scheduling)
 
 	if req.DeviceID != "" {
 		// Device is actively connected - expose all its capabilities for live execution.
 		if devCaps, err := s.getDeviceCapabilities(ctx, userID, req.DeviceID); err == nil {
 			for _, cap := range devCaps {
 				baseName := strings.TrimPrefix(cap.Name, "on_device_")
+				llmName := "device_" + baseName
 				toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
-					Name:        baseName,
+					Name:        llmName,
 					Description: cap.Description,
 					Parameters:  cap.Parameters,
 				})
-				localToolNames[baseName] = true
+				localToolNames[llmName] = true
 			}
 		}
 	} else {
@@ -289,18 +294,19 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 			for deviceID, reg := range devRegs {
 				for _, cap := range reg.Capabilities {
 					baseName := strings.TrimPrefix(cap.Name, "on_device_")
+					llmName := "device_" + baseName
 					if scheduleableDeviceTools[baseName] {
-						if _, already := scheduleToolTargets[baseName]; already {
+						if _, already := scheduleToolTargets[llmName]; already {
 							continue // only register first device per tool
 						}
 						toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
-							Name:        baseName,
+							Name:        llmName,
 							Description: cap.Description,
 							Parameters:  cap.Parameters,
 						})
-						scheduleToolTargets[baseName] = deviceID
+						scheduleToolTargets[llmName] = deviceID
 					} else if liveOnlyDeviceTools[baseName] {
-						if liveOnlyToolNames[baseName] {
+						if liveOnlyToolNames[llmName] {
 							continue // only register once
 						}
 						desc := cap.Description
@@ -310,11 +316,11 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 							desc = "Only available when the companion app is open and actively connected"
 						}
 						toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
-							Name:        baseName,
+							Name:        llmName,
 							Description: desc,
 							Parameters:  cap.Parameters,
 						})
-						liveOnlyToolNames[baseName] = true
+						liveOnlyToolNames[llmName] = true
 					}
 				}
 			}
@@ -436,58 +442,60 @@ func (s *Server) handleOrchestratorStream(w http.ResponseWriter, r *http.Request
 				var result string
 				var execErr error
 				callSource := "builtin"
-				if isLocal := localToolNames[tc.Name]; isLocal && req.DeviceID != "" {
-					callSource = "device"
-					// Forward to device via SSE, block until result
-					callId := fmt.Sprintf("lc-%s-%d", tc.Name, time.Now().UnixNano())
-					resultCh := make(chan localCallResult, 1)
-					s.pendingLocalCalls.Store(callId, resultCh)
-					defer s.pendingLocalCalls.Delete(callId)
-					argsJSON, _ := json.Marshal(tc.Arguments)
-					sendEvent("tool_execute_local", map[string]string{
-						"callId":    callId,
-						"name":      tc.Name,
-						"arguments": string(argsJSON),
-					})
-					select {
-					case res := <-resultCh:
-						result = res.Output
-						if res.IsError {
-							execErr = fmt.Errorf("%s", res.Output)
+			if isLocal := localToolNames[tc.Name]; isLocal && req.DeviceID != "" {
+				callSource = "device"
+				// Strip the "device_" namespace prefix before forwarding to the companion.
+				deviceToolName := strings.TrimPrefix(tc.Name, "device_")
+				// Forward to device via SSE, block until result
+				callId := fmt.Sprintf("lc-%s-%d", tc.Name, time.Now().UnixNano())
+				resultCh := make(chan localCallResult, 1)
+				s.pendingLocalCalls.Store(callId, resultCh)
+				defer s.pendingLocalCalls.Delete(callId)
+				argsJSON, _ := json.Marshal(tc.Arguments)
+				sendEvent("tool_execute_local", map[string]string{
+					"callId":    callId,
+					"name":      deviceToolName,
+					"arguments": string(argsJSON),
+				})
+				select {
+				case res := <-resultCh:
+					result = res.Output
+					if res.IsError {
+						execErr = fmt.Errorf("%s", res.Output)
+						result = ""
+					}
+				case <-time.After(30 * time.Second):
+					execErr = fmt.Errorf("local tool %s timed out after 30s", tc.Name)
+				}
+			} else if targetDeviceID, isScheduled := scheduleToolTargets[tc.Name]; isScheduled {
+				callSource = "device"
+				// Strip the "device_" namespace prefix before storing/forwarding to the companion.
+				deviceToolName := strings.TrimPrefix(tc.Name, "device_")
+				task, taskErr := s.createDeviceTask(ctx, userID, targetDeviceID, deviceToolName, &deviceToolName, tc.Arguments)
+				if taskErr != nil {
+					execErr = fmt.Errorf("failed to schedule device task: %w", taskErr)
+				} else {
+					// Attempt to wake the device via UnifiedPush and wait up to 5s for the result.
+					pushErr := s.sendDeviceTaskPush(ctx, userID, targetDeviceID, task.ID)
+					if pushErr != nil {
+						log.Printf("[orchestrator] UP push for task %s failed: %v (will rely on heartbeat)", task.ID, pushErr)
+					}
+					completed, waitErr := s.waitForDeviceTask(ctx, userID, task.ID, 5*time.Second)
+					if waitErr == nil && completed.ResultOutput != nil {
+						result = *completed.ResultOutput
+						if completed.Status == "failed" {
+							execErr = fmt.Errorf("%s", result)
 							result = ""
 						}
-					case <-time.After(30 * time.Second):
-						execErr = fmt.Errorf("local tool %s timed out after 30s", tc.Name)
-					}
-				} else if targetDeviceID, isScheduled := scheduleToolTargets[tc.Name]; isScheduled {
-					callSource = "device"
-					// Queue as an async device_task, then try to wake the device via UP push.
-					toolNameStr := tc.Name
-					task, taskErr := s.createDeviceTask(ctx, userID, targetDeviceID, tc.Name, &toolNameStr, tc.Arguments)
-					if taskErr != nil {
-						execErr = fmt.Errorf("failed to schedule device task: %w", taskErr)
 					} else {
-						// Attempt to wake the device via UnifiedPush and wait up to 5s for the result.
-						pushErr := s.sendDeviceTaskPush(ctx, userID, targetDeviceID, task.ID)
-						if pushErr != nil {
-							log.Printf("[orchestrator] UP push for task %s failed: %v (will rely on heartbeat)", task.ID, pushErr)
-						}
-						completed, waitErr := s.waitForDeviceTask(ctx, userID, task.ID, 5*time.Second)
-						if waitErr == nil && completed.ResultOutput != nil {
-							result = *completed.ResultOutput
-							if completed.Status == "failed" {
-								execErr = fmt.Errorf("%s", result)
-								result = ""
-							}
-						} else {
-							// Fallback: device will pick it up on next heartbeat poll.
-							result = fmt.Sprintf("Scheduled on your companion device (task ID: %s). The action will execute the next time your device checks in.", task.ID)
-						}
+						// Fallback: device will pick it up on next heartbeat poll.
+						result = fmt.Sprintf("Scheduled on your companion device (task ID: %s). The action will execute the next time your device checks in.", task.ID)
 					}
-				} else if liveOnlyToolNames[tc.Name] {
-					callSource = "device"
-					// This tool requires an active device connection -- tell the LLM so it can inform the user.
-					result = fmt.Sprintf("Cannot execute '%s': this action requires your companion device to be actively connected. Please open the openCrow app on your phone and try again from there.", tc.Name)
+				}
+			} else if liveOnlyToolNames[tc.Name] {
+				callSource = "device"
+				// This tool requires an active device connection -- tell the LLM so it can inform the user.
+				result = fmt.Sprintf("Cannot execute '%s': this action requires your companion device to be actively connected. Please open the openCrow app on your phone and try again from there.", tc.Name)
 				} else {
 					if !isBuiltinToolName(tc.Name) {
 						callSource = "mcp"

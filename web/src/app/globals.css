@@ -193,3 +193,24 @@ body {
 .stagger-8 {
   animation-delay: 400ms;
 }
+
+/* ─── Skeleton shimmer ─── */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-mid) 0%,
+    var(--color-surface-highest) 45%,
+    var(--color-surface-mid) 70%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s linear infinite;
+}

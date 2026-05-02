@@ -73,7 +73,12 @@ func (s *Server) toolRelateEntities(ctx context.Context, userID string, args map
 func (s *Server) toolSearchMemory(ctx context.Context, userID string, args map[string]any) (map[string]any, error) {
 	query, _ := args["query"].(string)
 	if query == "" {
-		return map[string]any{"success": false, "error": "query is required"}, nil
+		return map[string]any{"success": false, "error": "query is required. Pass a keyword or phrase to search, e.g. \"languages\", \"Tokyo trip\", \"allergies\"."}, nil
+	}
+
+	responseFormat, _ := args["response_format"].(string)
+	if responseFormat == "" {
+		responseFormat = "detailed"
 	}
 
 	entities, err := s.searchMemoryEntities(ctx, userID, query)
@@ -83,6 +88,20 @@ func (s *Server) toolSearchMemory(ctx context.Context, userID string, args map[s
 	observations, err := s.searchMemoryObservations(ctx, userID, query)
 	if err != nil {
 		return map[string]any{"success": false, "error": fmt.Sprintf("search failed: %v", err)}, nil
+	}
+
+	if responseFormat == "concise" {
+		lines := make([]string, 0, len(entities)+len(observations))
+		for _, e := range entities {
+			lines = append(lines, fmt.Sprintf("[%s] %s: %s", e.Type, e.Name, e.Summary))
+		}
+		for _, o := range observations {
+			lines = append(lines, fmt.Sprintf("obs(%s): %s", o.EntityName, o.Content))
+		}
+		return map[string]any{
+			"success": true,
+			"results": lines,
+		}, nil
 	}
 
 	entityResults := make([]map[string]any, 0, len(entities))
@@ -95,11 +114,11 @@ func (s *Server) toolSearchMemory(ctx context.Context, userID string, args map[s
 			}
 		}
 		entityResults = append(entityResults, map[string]any{
-			"id":            e.ID,
-			"type":          e.Type,
-			"name":          e.Name,
-			"summary":       e.Summary,
-			"relations":     relList,
+			"id":        e.ID,
+			"type":      e.Type,
+			"name":      e.Name,
+			"summary":   e.Summary,
+			"relations": relList,
 		})
 	}
 

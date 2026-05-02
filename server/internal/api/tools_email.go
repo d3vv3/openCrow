@@ -207,38 +207,55 @@ func autoDetectEmailServer(email string) *emailServerInfo {
 func (s *Server) toolCheckEmail(ctx context.Context, userID string, args map[string]any) (map[string]any, error) {
 	creds, err := s.getFirstEmailCredentials(ctx, userID)
 	if err != nil {
-		return map[string]any{"success": false, "error": "No active email accounts configured. Use setup_email first."}, nil
+		return map[string]any{"success": false, "error": "No email account configured. Call setup_email with your address and password (or app-specific password) to connect an inbox first."}, nil
 	}
 
 	sess, err := dialIMAP(ctx, creds.ImapHost, creds.ImapPort, creds.ImapUsername, creds.ImapPassword, creds.UseTLS)
 	if err != nil {
-		return map[string]any{"success": false, "error": fmt.Sprintf("IMAP connect failed: %v", err)}, nil
+		return map[string]any{"success": false, "error": fmt.Sprintf("IMAP connection failed (%s:%d): %v. Check your credentials or call setup_email again with corrected imap_host/imap_port.", creds.ImapHost, creds.ImapPort, err)}, nil
 	}
 	defer sess.close()
 
 	count, err := sess.selectMailbox("INBOX")
 	if err != nil {
-		return map[string]any{"success": false, "error": fmt.Sprintf("SELECT INBOX failed: %v", err)}, nil
+		return map[string]any{"success": false, "error": fmt.Sprintf("Could not open INBOX: %v", err)}, nil
 	}
 
-	// Fetch last 10 message headers
-	start := count - 9
+	// How many messages to fetch (default 10, max 50)
+	fetchN := 10
+	if lv, ok := args["limit"].(float64); ok && int(lv) > 0 {
+		fetchN = int(lv)
+		if fetchN > 50 {
+			fetchN = 50
+		}
+	}
+
+	responseFormat, _ := args["response_format"].(string)
+	if responseFormat == "" {
+		responseFormat = "detailed"
+	}
+
+	start := count - (fetchN - 1)
 	if start < 1 {
 		start = 1
 	}
-	var messages []map[string]any
+	var messages []any
 	if count > 0 {
 		headers, herr := sess.fetchHeaders(start, count)
 		if herr == nil {
 			for i := len(headers) - 1; i >= 0; i-- {
 				h := headers[i]
-				messages = append(messages, map[string]any{
-					"seq":     h.SeqNum,
-					"subject": h.Subject,
-					"from":    h.From,
-					"date":    h.Date,
-					"flags":   h.Flags,
-				})
+				if responseFormat == "concise" {
+					messages = append(messages, fmt.Sprintf("#%d: %s (from: %s, %s)", h.SeqNum, h.Subject, h.From, h.Date))
+				} else {
+					messages = append(messages, map[string]any{
+						"seq":     h.SeqNum,
+						"subject": h.Subject,
+						"from":    h.From,
+						"date":    h.Date,
+						"flags":   h.Flags,
+					})
+				}
 			}
 		}
 	}
@@ -252,33 +269,37 @@ func (s *Server) toolCheckEmail(ctx context.Context, userID string, args map[str
 }
 
 func (s *Server) toolReadEmail(ctx context.Context, userID string, args map[string]any) (map[string]any, error) {
-	seqStr, _ := args["messageId"].(string)
+	// Accept both snake_case (new) and camelCase (legacy) param names.
+	seqStr, _ := args["message_seq"].(string)
 	if seqStr == "" {
-		return map[string]any{"success": false, "error": "messageId (sequence number) is required"}, nil
+		seqStr, _ = args["messageId"].(string)
+	}
+	if seqStr == "" {
+		return map[string]any{"success": false, "error": "message_seq is required. Pass the seq number from check_email or search_email results."}, nil
 	}
 	seq := 0
 	if n, err := fmt.Sscanf(seqStr, "%d", &seq); n != 1 || err != nil {
-		return map[string]any{"success": false, "error": "messageId must be a numeric sequence number"}, nil
+		return map[string]any{"success": false, "error": fmt.Sprintf("message_seq must be a numeric sequence number (e.g. \"42\"), got: %q. Use check_email or search_email to find valid seq numbers.", seqStr)}, nil
 	}
 
 	creds, err := s.getFirstEmailCredentials(ctx, userID)
 	if err != nil {
-		return map[string]any{"success": false, "error": "No active email accounts configured."}, nil
+		return map[string]any{"success": false, "error": "No email account configured. Call setup_email first."}, nil
 	}
 
 	sess, err := dialIMAP(ctx, creds.ImapHost, creds.ImapPort, creds.ImapUsername, creds.ImapPassword, creds.UseTLS)
 	if err != nil {
-		return map[string]any{"success": false, "error": fmt.Sprintf("IMAP connect failed: %v", err)}, nil
+		return map[string]any{"success": false, "error": fmt.Sprintf("IMAP connection failed (%s:%d): %v. Check credentials or call setup_email again.", creds.ImapHost, creds.ImapPort, err)}, nil
 	}
 	defer sess.close()
 
 	if _, err := sess.selectMailbox("INBOX"); err != nil {
-		return map[string]any{"success": false, "error": fmt.Sprintf("SELECT INBOX failed: %v", err)}, nil
+		return map[string]any{"success": false, "error": fmt.Sprintf("Could not open INBOX: %v", err)}, nil
 	}
 
 	body, err := sess.fetchBody(seq, 8000)
 	if err != nil {
-		return map[string]any{"success": false, "error": fmt.Sprintf("FETCH failed: %v", err)}, nil
+		return map[string]any{"success": false, "error": fmt.Sprintf("Could not fetch message #%d: %v. Use check_email to verify the seq number exists.", seq, err)}, nil
 	}
 
 	return map[string]any{
@@ -296,17 +317,17 @@ func (s *Server) toolSearchEmail(ctx context.Context, userID string, args map[st
 
 	creds, err := s.getFirstEmailCredentials(ctx, userID)
 	if err != nil {
-		return map[string]any{"success": false, "error": "No active email accounts configured."}, nil
+		return map[string]any{"success": false, "error": "No email account configured. Call setup_email first."}, nil
 	}
 
 	sess, err := dialIMAP(ctx, creds.ImapHost, creds.ImapPort, creds.ImapUsername, creds.ImapPassword, creds.UseTLS)
 	if err != nil {
-		return map[string]any{"success": false, "error": fmt.Sprintf("IMAP connect failed: %v", err)}, nil
+		return map[string]any{"success": false, "error": fmt.Sprintf("IMAP connection failed (%s:%d): %v. Check credentials or call setup_email again.", creds.ImapHost, creds.ImapPort, err)}, nil
 	}
 	defer sess.close()
 
 	if _, err := sess.selectMailbox("INBOX"); err != nil {
-		return map[string]any{"success": false, "error": fmt.Sprintf("SELECT INBOX failed: %v", err)}, nil
+		return map[string]any{"success": false, "error": fmt.Sprintf("Could not open INBOX: %v", err)}, nil
 	}
 
 	// Build IMAP search criteria: search subject OR body text
@@ -372,7 +393,7 @@ func (s *Server) toolComposeEmail(ctx context.Context, userID string, args map[s
 
 	creds, err := s.getFirstEmailCredentials(ctx, userID)
 	if err != nil {
-		return map[string]any{"success": false, "error": "No active email accounts configured. Use setup_email first."}, nil
+		return map[string]any{"success": false, "error": "No email account configured. Call setup_email with your address and password before sending email."}, nil
 	}
 
 	smtpHost := creds.SmtpHost

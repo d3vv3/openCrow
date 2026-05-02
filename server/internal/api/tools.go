@@ -75,9 +75,9 @@ func isBuiltinToolName(name string) bool {
 		"configure_heartbeat", "trigger_heartbeat", "queue_device_action",
 		"list_devices", "create_device", "delete_device", "edit_device",
 		"list_device_tasks", "edit_device_task", "get_device_capabilities",
-		"setup_email", "remove_email", "check_email", "read_email", "reply_email", "compose_email", "search_email",
+		"setup_email", "remove_email", "check_email", "read_email", "compose_email", "search_email",
 		"send_notification", "send_channel_notification", "send_push_notification", "setup_telegram_bot",
-		"setup_dav", "list_dav_integrations", "test_dav_connection", "list_webdav_files",
+		"setup_dav", "inspect_dav", "list_dav_integrations", "test_dav_connection", "list_webdav_files",
 		"list_caldav_calendars", "list_carddav_address_books",
 		"create_caldav_event", "delete_caldav_event",
 		"create_carddav_contact", "delete_carddav_contact",
@@ -130,7 +130,7 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 
 	// ── Tasks / Scheduling ───────────────────────────────────────────
 	case "list_tasks":
-		return s.toolListTasks(ctx, userID)
+		return s.toolListTasks(ctx, userID, args)
 
 	case "schedule_task":
 		return s.toolScheduleTask(ctx, userID, args)
@@ -182,9 +182,6 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 	case "read_email":
 		return s.toolReadEmail(ctx, userID, args)
 
-	case "reply_email":
-		return s.toolReplyEmail(ctx, userID, args)
-
 	case "compose_email":
 		return s.toolComposeEmail(ctx, userID, args)
 
@@ -205,6 +202,9 @@ func (s *Server) executeTool(ctx context.Context, userID, name string, args map[
 	// ── DAV ──────────────────────────────────────────────────────────
 	case "setup_dav":
 		return s.toolSetupDAV(ctx, userID, args)
+
+	case "inspect_dav":
+		return s.toolInspectDAV(ctx, userID, args)
 
 	case "list_dav_integrations":
 		return s.toolListDAVIntegrations(ctx, userID, args)

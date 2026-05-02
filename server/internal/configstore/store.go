@@ -225,6 +225,10 @@ func normalize(cfg UserConfig) UserConfig {
 		// renamed to *_memory_* variants
 		"remember_entity": true, "relate_entities": true,
 		"forget_entity": true, "edit_entity": true,
+		// reply_email was removed (never implemented, always returned success=false)
+		"reply_email": true,
+		// list_dav_integrations and test_dav_connection merged into inspect_dav
+		"list_dav_integrations": true, "test_dav_connection": true,
 	}
 	filtered := cfg.Tools.Definitions[:0]
 	for _, d := range cfg.Tools.Definitions {

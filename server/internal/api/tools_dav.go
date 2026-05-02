@@ -134,6 +134,55 @@ func (s *Server) toolTestDAVConnection(ctx context.Context, userID string, args 
 	return map[string]any{"success": true, "result": res}, nil
 }
 
+// toolInspectDAV combines list + optional test into one call, reducing round-trips.
+// When dav_id is omitted it lists all integrations. When dav_id is provided it also
+// tests the connection and discovers available calendars/address books.
+func (s *Server) toolInspectDAV(ctx context.Context, userID string, args map[string]any) (map[string]any, error) {
+	davID := normalizeDAVIDFromArgs(args)
+
+	// Always list all integrations
+	configs, err := s.loadDAVConfigsForUser(userID)
+	if err != nil {
+		return map[string]any{"success": false, "error": "failed to load DAV configs. Use setup_dav to add an integration first."}, nil
+	}
+	items := make([]map[string]any, 0, len(configs))
+	for _, cfg := range configs {
+		items = append(items, map[string]any{
+			"dav_id":         cfg.ID,
+			"name":           cfg.Name,
+			"url":            cfg.URL,
+			"enabled":        cfg.Enabled,
+			"webdav_enabled": cfg.WebDAVEnabled,
+			"caldav_enabled": cfg.CalDAVEnabled,
+			"carddav_enabled": cfg.CardDAVEnabled,
+		})
+	}
+	result := map[string]any{
+		"success":     true,
+		"integrations": items,
+		"count":       len(items),
+	}
+
+	// If a specific dav_id was requested, also test that connection
+	if davID != "" {
+		davCfg, err := s.resolveDAVConfigForUser(userID, davID)
+		if err != nil {
+			result["test_error"] = fmt.Sprintf("dav_id %q not found. Available IDs: see integrations list above.", davID)
+			return result, nil
+		}
+		if err := ensureDAVConfigUsable(davCfg); err != nil {
+			result["test_error"] = err.Error()
+			return result, nil
+		}
+		res := s.testDAVConnection(ctx, davCfg)
+		result["test_result"] = res
+		if !res.OK {
+			result["test_error"] = res.Error
+		}
+	}
+	return result, nil
+}
+
 func (s *Server) toolListWebDAVFiles(ctx context.Context, userID string, args map[string]any) (map[string]any, error) {
 	client, cfg, errResult := s.requireDAVClient(userID, normalizeDAVIDFromArgs(args))
 	if errResult != nil {
