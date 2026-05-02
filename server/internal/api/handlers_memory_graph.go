@@ -2,8 +2,17 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 )
+
+// patchEntityRequest is the JSON body for PATCH /v1/memory/entities/{id}.
+// Every field is optional; omitted fields are left unchanged.
+type patchEntityRequest struct {
+	Type    *string `json:"type,omitempty"`
+	Name    *string `json:"name,omitempty"`
+	Summary *string `json:"summary,omitempty"`
+}
 
 // handleGetMemoryGraph returns the full memory graph for the authenticated user.
 //
@@ -52,6 +61,63 @@ func (s *Server) handleGetMemoryEntity(w http.ResponseWriter, r *http.Request) {
 		"relations":    relations,
 		"observations": observations,
 	})
+}
+
+// handleUpdateMemoryEntity updates a memory entity's type, name, and/or summary.
+// Only the fields present in the JSON body are changed.
+//
+// @Summary     Update memory entity
+// @Tags        memory
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id path string true "Entity ID"
+// @Param       body body patchEntityRequest false "Fields to update"
+// @Success     200 {object} MemoryEntity
+// @Failure     404 {object} ErrorResponse
+// @Router      /v1/memory/entities/{id} [patch]
+func (s *Server) handleUpdateMemoryEntity(w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromContext(r.Context())
+	entityID := r.PathValue("id")
+
+	var req patchEntityRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Load existing entity so we only overwrite fields that were provided.
+	existing, err := s.getMemoryEntity(r.Context(), userID, entityID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "entity not found")
+		return
+	}
+
+	t := existing.Type
+	n := existing.Name
+	s2 := existing.Summary
+	if req.Type != nil {
+		t = *req.Type
+	}
+	if req.Name != nil {
+		n = *req.Name
+	}
+	if req.Summary != nil {
+		s2 = *req.Summary
+	}
+
+	if err := s.updateMemoryEntity(r.Context(), userID, entityID, t, n, s2); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update entity")
+		return
+	}
+
+	// Re-read to return the updated entity
+	updated, err := s.getMemoryEntity(r.Context(), userID, entityID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to read updated entity")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 // handleDeleteMemoryEntity deletes an entity and all its relations.

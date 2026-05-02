@@ -66,6 +66,7 @@ import type {
   SkillFile,
   InstallSkillsResult,
   MemoryGraph,
+  MemoryEntity,
   TaskDTO,
   HeartbeatConfig,
   HeartbeatEventDTO,
@@ -711,6 +712,11 @@ export const endpoints = {
   // Memory
   // Memory Graph
   getMemoryGraph: () => api<MemoryGraph>("/v1/memory/graph"),
+  updateMemoryEntity: (id: string, patch: { type?: string; name?: string; summary?: string }) =>
+    api<MemoryEntity>(`/v1/memory/entities/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
   deleteMemoryEntity: (id: string) => api(`/v1/memory/entities/${id}`, { method: "DELETE" }),
   deleteMemoryRelation: (id: string) => api(`/v1/memory/relations/${id}`, { method: "DELETE" }),
 

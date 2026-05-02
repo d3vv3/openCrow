@@ -938,6 +938,15 @@ definitions:
           type: string
         type: array
     type: object
+  api.patchEntityRequest:
+    properties:
+      name:
+        type: string
+      summary:
+        type: string
+      type:
+        type: string
+    type: object
   api.updateSkillFileRequest:
     properties:
       content:
@@ -2490,6 +2499,36 @@ paths:
       security:
       - BearerAuth: []
       summary: Get memory entity
+      tags:
+      - memory
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Entity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/api.patchEntityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MemoryEntity'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update memory entity
       tags:
       - memory
   /v1/memory/graph:

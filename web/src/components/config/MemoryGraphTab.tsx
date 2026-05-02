@@ -5,6 +5,7 @@ import type { ForceGraphProps, ForceGraphMethods } from "react-force-graph-2d";
 import type { MemoryGraph, MemoryEntity, MemoryRelation } from "@/lib/api";
 import { endpoints } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { TrashIcon } from "@/components/ui/icons";
 
 // react-force-graph-2d uses browser APIs, must be loaded client-side only.
@@ -179,6 +180,13 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
       onError?.("Failed to delete relation");
     }
   };
+
+  // All type options for the dropdown: predefined types + current custom type (if any)
+  const allTypeOptions = (() => {
+    const set = new Set(Object.keys(TYPE_COLORS));
+    if (selected?.type) set.add(selected.type);
+    return Array.from(set).sort();
+  })();
 
   const toggleFilter = (type: string) => {
     setActiveFilters((prev) => {
@@ -479,22 +487,36 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
 
         {/* Side panel -- glassy floating card */}
         {selected && (
-          <div className="absolute right-4 top-16 max-h-[calc(100%-5rem)] w-72 z-20 rounded-2xl border border-white/10 bg-surface-lowest/80 backdrop-blur-2xl shadow-[var(--shadow-float)] overflow-hidden flex flex-col animate-fade-in">
+          <div className="absolute right-4 top-16 max-h-[calc(100%-5rem)] w-80 z-20 rounded-2xl border border-white/10 bg-surface-lowest/80 backdrop-blur-2xl shadow-[var(--shadow-float)] overflow-hidden flex flex-col animate-fade-in">
             {/* Header */}
             <div className="shrink-0 px-4 pt-4 pb-3 flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-semibold text-on-surface text-sm truncate">{selected.name}</p>
-                <div className="flex items-center gap-1.5 mt-1">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-on-surface text-base truncate">{selected.name}</p>
+                <div className="flex items-center gap-2 mt-2">
                   <span
-                    className="w-2 h-2 rounded-full shrink-0"
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ background: getColor(selected.type) }}
                   />
-                  <p className="text-xs text-on-surface-variant capitalize">{selected.type}</p>
+                  {/* Type dropdown */}
+                  <Select
+                    value={selected.type}
+                    options={allTypeOptions.map((t) => ({ value: t, label: t }))}
+                    onChange={async (e) => {
+                      const newType = e.target.value;
+                      try {
+                        await endpoints.updateMemoryEntity(selected.id, { type: newType });
+                        setSelected({ ...selected, type: newType });
+                        await load();
+                      } catch {
+                        onError?.("Failed to update entity type");
+                      }
+                    }}
+                  />
                 </div>
               </div>
               <button
                 onClick={() => setSelected(null)}
-                className="text-on-surface-variant/70 hover:text-on-surface text-sm leading-none mt-0.5 cursor-pointer shrink-0"
+                className="text-on-surface-variant/70 hover:text-on-surface text-base leading-none mt-0.5 cursor-pointer shrink-0"
                 title="Close"
               >
                 ✕
@@ -504,7 +526,7 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
             {/* Summary */}
             {selected.summary && (
               <div className="px-4 pb-3">
-                <p className="text-xs text-on-surface-variant leading-relaxed">
+                <p className="text-sm text-on-surface-variant leading-relaxed">
                   {selected.summary}
                 </p>
               </div>
@@ -515,11 +537,11 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
 
             {/* Relations */}
             <div className="max-h-52 overflow-y-auto px-4 py-3 space-y-1">
-              <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider mb-2">
+              <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">
                 Relations ({selectedRelations.length})
               </p>
               {selectedRelations.length === 0 && (
-                <p className="text-xs text-on-surface-variant">No relations</p>
+                <p className="text-sm text-on-surface-variant">No relations</p>
               )}
               {selectedRelations.map((r) => {
                 const isFrom = r.from_entity_id === selected.id;
@@ -530,14 +552,14 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
                     className="group flex items-center justify-between gap-2 py-2 border-b border-white/5 last:border-0"
                   >
                     <div className="min-w-0">
-                      <p className="text-xs text-on-surface truncate">
+                      <p className="text-sm text-on-surface truncate">
                         {isFrom ? "-> " : "<- "}
                         {other}
                       </p>
-                      <p className="text-xs text-on-surface-variant italic truncate">
+                      <p className="text-sm text-on-surface-variant italic truncate">
                         {r.relation}
                       </p>
-                      <p className="text-[10px] text-on-surface-variant">
+                      <p className="text-xs text-on-surface-variant">
                         {Math.round(r.confidence * 100)}% . *{r.reinforcement_count}
                       </p>
                     </div>

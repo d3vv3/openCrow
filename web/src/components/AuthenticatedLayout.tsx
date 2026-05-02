@@ -244,6 +244,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
           <div className="relative mt-2 flex-1 overflow-hidden px-3 pb-2">
             <button
               onClick={() => {
+                setActiveChatId(null);
                 router.push("/chat");
                 closeSidebar();
               }}

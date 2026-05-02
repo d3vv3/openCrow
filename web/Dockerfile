@@ -32,7 +32,9 @@ FROM runtime-base AS runtime-dev
 WORKDIR /app
 ENV NODE_ENV=development
 COPY package.json ./
-RUN npm install --no-audit --no-fund
+RUN npm install --no-audit --no-fund \
+ && mkdir -p .next \
+ && chown -R node:node /app
 USER node
 EXPOSE 3000
 CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]

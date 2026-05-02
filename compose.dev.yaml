@@ -118,7 +118,6 @@ services:
       dockerfile: Dockerfile
       target: runtime-dev
     container_name: opencrow-web-dev
-    user: "1000:1000"
     environment:
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
       API_INTERNAL_BASE_URL: http://server:${API_PORT:-8080}
@@ -130,8 +129,7 @@ services:
       - "3000:3000"
     volumes:
       - ./web:/app
-      - web_node_modules_dev:/app/node_modules
-      - web_next_cache_dev:/app/.next
+      - web_next_dev:/app/.next
 
 volumes:
   postgres_data_dev:
@@ -142,6 +140,6 @@ volumes:
     name: ${WHISPER_MODELS_VOLUME_NAME:-opencrow_whisper_models}
   sandbox_dev:
     name: ${SANDBOX_VOLUME_NAME:-opencrow_sandbox}
-  web_node_modules_dev:
-  web_next_cache_dev:
   kokoro_data:
+  web_next_dev:
+    name: ${WEB_NEXT_VOLUME_NAME:-opencrow_web_next_dev}

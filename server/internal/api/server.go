@@ -364,6 +364,7 @@ func (s *Server) registerTaskRoutes() {
 func (s *Server) registerMemoryRoutes() {
 	s.mux.Handle("GET /v1/memory/graph", s.requireAccessToken(http.HandlerFunc(s.handleGetMemoryGraph)))
 	s.mux.Handle("GET /v1/memory/entities/{id}", s.requireAccessToken(http.HandlerFunc(s.handleGetMemoryEntity)))
+	s.mux.Handle("PATCH /v1/memory/entities/{id}", s.requireAccessToken(http.HandlerFunc(s.handleUpdateMemoryEntity)))
 	s.mux.Handle("DELETE /v1/memory/entities/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteMemoryEntity)))
 	s.mux.Handle("DELETE /v1/memory/relations/{id}", s.requireAccessToken(http.HandlerFunc(s.handleDeleteMemoryRelation)))
 }
