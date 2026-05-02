@@ -1,14 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import dynamic from "next/dynamic";
+import type { ForceGraphProps, ForceGraphMethods } from "react-force-graph-2d";
 import type { MemoryGraph, MemoryEntity, MemoryRelation } from "@/lib/api";
 import { endpoints } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { TrashIcon } from "@/components/ui/icons";
 
-// react-force-graph-2d uses browser APIs, must be loaded client-side only
-const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
+// react-force-graph-2d uses browser APIs, must be loaded client-side only.
+// next/dynamic's LoadableComponent wrapper breaks useImperativeHandle ref forwarding
+// (d3Force / d3ReheatSimulation become unavailable). Manual import preserves the real ref.
+type FCwithRef = <NodeType = object, LinkType = object>(
+  props: ForceGraphPropsWithRef<NodeType, LinkType>,
+) => React.ReactElement;
+type ForceGraphPropsWithRef<N = object, L = object> = ForceGraphProps<N, L> & {
+  ref?: React.MutableRefObject<ForceGraphMethods | undefined>;
+};
+let ForceGraph2DCached: FCwithRef | null = null;
 
 type NodeObject = {
   id: string;
@@ -105,8 +113,18 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const graphRef = useRef<any>(null); // ForceGraphMethods API includes runtime-only renderer()
+  const graphRef = useRef<any>(null); // ForceGraphMethods + runtime-only renderer()
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+
+  // Manual dynamic import -- next/dynamic's LoadableComponent breaks ref forwarding
+  const [ForceGraph2D, setForceGraph2D] = useState<FCwithRef | null>(() => ForceGraph2DCached);
+  useEffect(() => {
+    if (ForceGraph2D) return;
+    import("react-force-graph-2d").then((mod) => {
+      ForceGraph2DCached = mod.default as unknown as FCwithRef;
+      setForceGraph2D(() => ForceGraph2DCached);
+    });
+  }, [ForceGraph2D]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -210,9 +228,8 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
     [allNodes, isFiltered, activeFilters],
   );
 
-  const visibleNodeIds = new Set(nodes.map((n) => n.id));
-
   const links = useMemo(() => {
+    const visibleNodeIds = new Set(nodes.map((n) => n.id));
     const allLinks: LinkObject[] = (graph?.relations ?? []).map((r) => ({
       id: r.id,
       source: r.from_entity_id,
@@ -225,7 +242,7 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
           (l) => visibleNodeIds.has(l.source as string) && visibleNodeIds.has(l.target as string),
         )
       : allLinks;
-  }, [graph?.relations, isFiltered, visibleNodeIds]);
+  }, [graph?.relations, isFiltered, nodes]);
 
   // Compute neighbour sets for hover highlighting
   const hoveredNeighbourIds = new Set<string>();
@@ -353,18 +370,23 @@ export function MemoryGraphTab({ onError }: { onError?: (msg: string) => void })
             <div className="flex items-center justify-center h-full text-on-surface-variant text-sm">
               No memory graph yet. Chat with the assistant to build it automatically.
             </div>
+          ) : !ForceGraph2D ? (
+            <div className="flex items-center justify-center h-full text-on-surface-variant text-sm">
+              Loading graph...
+            </div>
           ) : (
             <ForceGraph2D
               key={graphKey}
               ref={graphRef}
-              graphData={graphData}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              graphData={graphData as any}
               width={dimensions.width}
               height={dimensions.height}
               nodeLabel={(n) => {
                 const node = n as NodeObject;
                 return `${node.name} (${node.type})${node.summary ? "\n" + node.summary : ""}`;
               }}
-              nodeColor={(n) => "transparent"}
+              nodeColor={() => "transparent"}
               nodeVal={(n) => (n as NodeObject).val ?? 4}
               linkLabel={(l) => {
                 const link = l as LinkObject;

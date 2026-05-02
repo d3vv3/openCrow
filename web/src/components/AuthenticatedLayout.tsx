@@ -1,12 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Image from "next/image";
-import ChatShell from "@/components/ChatShell";
-import ConfigStudio from "@/components/ConfigStudio";
-import OverviewView from "@/components/OverviewView";
-import TerminalView from "@/components/TerminalView";
-import { MemoryGraphTab } from "@/components/config/MemoryGraphTab";
 import {
   ChatIcon,
   LogoutIcon,
@@ -16,9 +12,10 @@ import {
   ToolIcon,
   TrashIcon,
 } from "@/components/ui/icons";
-import { clearTokens, endpoints, type ConversationDTO } from "@/lib/api";
+import { clearTokens, endpoints, getOpenCrowVersion } from "@/lib/api";
+import { useAppStore } from "@/lib/store";
 
-type Section = "chat" | "config" | "overview" | "terminal" | "memory";
+// ─── Helpers ───
 
 function automationLabel(kind?: string) {
   switch (kind) {
@@ -31,46 +28,7 @@ function automationLabel(kind?: string) {
   }
 }
 
-type SidebarNavButtonProps = {
-  section: Section;
-  icon: React.ReactNode;
-  label: string;
-  tooltip?: string;
-  activeSection: Section;
-  setActiveSection: (section: Section) => void;
-  setRequestedConfigTab: (tab: string | undefined) => void;
-};
-
-function SidebarNavButton({
-  section,
-  icon,
-  label,
-  tooltip,
-  activeSection,
-  setActiveSection,
-  setRequestedConfigTab,
-  onNavigate,
-}: SidebarNavButtonProps & { onNavigate?: () => void }) {
-  const active = activeSection === section;
-  return (
-    <button
-      onClick={() => {
-        if (section === "config") setRequestedConfigTab(undefined);
-        setActiveSection(section);
-        onNavigate?.();
-      }}
-      title={tooltip}
-      className={`flex w-full items-center gap-3 cursor-pointer rounded-lg px-4 py-2.5 text-base transition-colors duration-150 ${
-        active
-          ? "text-violet-light"
-          : "text-on-surface-variant hover:bg-surface-mid/50 hover:text-on-surface"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
+// ─── Sub-components ───
 
 function MobileMenuButton({
   onClick,
@@ -97,41 +55,67 @@ function MobileMenuButton({
   );
 }
 
-export default function AuthenticatedApp({
-  onLogout,
-  openCrowVersion,
+function SidebarNavButton({
+  path,
+  icon,
+  label,
+  tooltip,
+  currentPath,
+  onNavigate,
 }: {
-  onLogout?: () => void;
-  openCrowVersion: string;
+  path: string;
+  icon: React.ReactNode;
+  label: string;
+  tooltip?: string;
+  currentPath: string;
+  onNavigate?: () => void;
 }) {
-  const [activeSection, setActiveSection] = useState<Section>("chat");
-  const [requestedConfigTab, setRequestedConfigTab] = useState<string | undefined>(undefined);
-  const [conversations, setConversations] = useState<ConversationDTO[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [loadingConversations, setLoadingConversations] = useState(true);
-  const [showSystemChats, setShowSystemChats] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("showSystemChats") === "true";
-    } catch {
-      return false;
-    }
-  });
+  const router = useRouter();
+  const active = currentPath.startsWith(path);
+
+  return (
+    <button
+      onClick={() => {
+        router.push(path);
+        onNavigate?.();
+      }}
+      title={tooltip}
+      className={`flex w-full items-center gap-3 cursor-pointer rounded-lg px-4 py-2.5 text-base transition-colors duration-150 ${
+        active
+          ? "text-violet-light"
+          : "text-on-surface-variant hover:bg-surface-mid/50 hover:text-on-surface"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+// ─── Main Layout ───
+
+export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const currentPath = router.pathname;
+
+  const conversations = useAppStore((s) => s.conversations);
+  const setConversations = useAppStore((s) => s.setConversations);
+  const showSystemChats = useAppStore((s) => s.showSystemChats);
+  const setShowSystemChats = useAppStore((s) => s.setShowSystemChats);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const version = getOpenCrowVersion();
 
-  const initialLoadDone = useRef(false);
-
-  // Single source of truth for conversations lives in useChatSession (via ChatShell).
-  // This callback receives the authoritative list and handles first-load side effects.
-  const handleConversationsUpdate = useCallback((list: ConversationDTO[]) => {
-    setConversations(list);
-    if (!initialLoadDone.current) {
-      initialLoadDone.current = true;
-      setLoadingConversations(false);
-      if (list.length > 0) {
-        setActiveConversationId((prev) => prev ?? list[0].id);
-      }
-    }
-  }, []);
+  // Fetch conversations on mount if the store is empty (e.g. user lands on a non-chat page)
+  useEffect(() => {
+    if (conversations.length > 0) return;
+    endpoints
+      .listConversations()
+      .then((data) => {
+        if (data) setConversations(data);
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function closeSidebar() {
     setSidebarOpen(false);
@@ -141,22 +125,14 @@ export default function AuthenticatedApp({
     try {
       await endpoints.logout();
     } catch {
-      // best-effort server invalidation; always clear local auth state
+      // best-effort
     }
     clearTokens();
-    if (onLogout) onLogout();
-    else window.location.href = "/";
+    // Full reload to clear all in-memory state
+    window.location.href = "/";
   }
 
-  // Map section -> ConfigStudio tab key (for sections that render ConfigStudio)
-  const sectionTitles: Record<Section, string> = {
-    chat: "Chat",
-    config: "Configuration",
-    overview: "Overview",
-    terminal: "Sandboxed terminal",
-    memory: "Memory Graph",
-  };
-
+  // ── Conversation list filtering ──
   const visibleConversations = (
     showSystemChats ? conversations : conversations.filter((chat) => !chat.isAutomatic)
   ).sort((a, b) => {
@@ -165,8 +141,11 @@ export default function AuthenticatedApp({
     return 0;
   });
 
-  const activeConversation = conversations.find((c) => c.id === activeConversationId);
-  const isReadOnly = !!activeConversation?.channel;
+  // Derive active conversation ID from URL for highlight
+  let activeConversationId: string | null = null;
+  if (currentPath.startsWith("/chat/")) {
+    activeConversationId = router.query.id as string;
+  }
 
   return (
     <div className="h-screen overflow-hidden bg-surface">
@@ -231,16 +210,14 @@ export default function AuthenticatedApp({
                 className="opacity-90 mx-4 crow-icon"
               />
             </h1>
-            <p className="mt-1 font-mono text-xs text-on-surface-variant">{openCrowVersion}</p>
+            <p className="mt-1 font-mono text-xs text-on-surface-variant">{version}</p>
           </div>
 
           {/* Conversation nav */}
           <div className="relative mt-2 flex-1 overflow-hidden px-3 pb-2">
             <button
               onClick={() => {
-                setActiveSection("chat");
-                setRequestedConfigTab(undefined);
-                setActiveConversationId(null);
+                router.push("/chat");
                 closeSidebar();
               }}
               className="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-violet px-4 py-2.5 text-base font-medium text-white transition-colors hover:bg-violet/90"
@@ -255,16 +232,21 @@ export default function AuthenticatedApp({
 
             <div className="flex h-[calc(100%-76px)] flex-col">
               <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-                {loadingConversations ? (
-                  <p className="px-2 py-4 text-xs text-on-surface-variant">Loading chats...</p>
-                ) : visibleConversations.length === 0 ? (
+                {conversations.length === 0 && (
                   <p className="px-2 py-4 text-xs text-on-surface-variant">
                     {showSystemChats ? "No chats yet" : "No user or heartbeat chats yet"}
                   </p>
-                ) : (
+                )}
+                {conversations.length > 0 && visibleConversations.length === 0 && (
+                  <p className="px-2 py-4 text-xs text-on-surface-variant">
+                    {showSystemChats ? "No chats yet" : "No user or heartbeat chats yet"}
+                  </p>
+                )}
+                {visibleConversations.length > 0 && (
                   <div className="space-y-1 p-0.5">
                     {visibleConversations.map((chat) => {
-                      const isActive = activeSection === "chat" && activeConversationId === chat.id;
+                      const isActive =
+                        currentPath.startsWith("/chat") && activeConversationId === chat.id;
                       const isAutomatic = !!chat.isAutomatic;
                       const isChannel = !!chat.channel;
                       const rawTitle = chat.title || "Untitled chat";
@@ -297,9 +279,7 @@ export default function AuthenticatedApp({
                           />
                           <button
                             onClick={() => {
-                              setActiveSection("chat");
-                              setRequestedConfigTab(undefined);
-                              setActiveConversationId(chat.id);
+                              router.push(`/chat/${chat.id}`);
                               closeSidebar();
                             }}
                             className={`flex-1 min-w-0 cursor-pointer px-3 py-2 text-left ${
@@ -340,7 +320,7 @@ export default function AuthenticatedApp({
                             <div className="mt-1 flex items-center gap-2">
                               {isChannel && (
                                 <span className="inline-flex items-center whitespace-nowrap rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider text-cyan">
-                                  pinned · read-only
+                                  pinned . read-only
                                 </span>
                               )}
                               {isAutomatic && !isChannel && (
@@ -363,8 +343,10 @@ export default function AuthenticatedApp({
                             onClick={async (e) => {
                               e.stopPropagation();
                               await endpoints.deleteConversation(chat.id);
-                              setConversations((prev) => prev.filter((c) => c.id !== chat.id));
-                              if (activeConversationId === chat.id) setActiveConversationId(null);
+                              setConversations(conversations.filter((c) => c.id !== chat.id));
+                              if (activeConversationId === chat.id) {
+                                router.push("/chat");
+                              }
                             }}
                             className="shrink-0 cursor-pointer p-1 mr-4 text-on-surface-variant/50 opacity-0 group-hover:opacity-100 hover:text-error transition-all"
                             title="Delete conversation"
@@ -384,24 +366,7 @@ export default function AuthenticatedApp({
                   type="button"
                   role="switch"
                   aria-checked={showSystemChats}
-                  onClick={() => {
-                    setShowSystemChats((prev) => {
-                      const next = !prev;
-                      try {
-                        localStorage.setItem("showSystemChats", String(next));
-                      } catch {
-                        /* localStorage unavailable */
-                      }
-                      if (!next && activeConversationId) {
-                        const active = conversations.find(
-                          (chat) => chat.id === activeConversationId,
-                        );
-                        if (active?.isAutomatic && active.automationKind !== "heartbeat")
-                          setActiveConversationId(null);
-                      }
-                      return next;
-                    });
-                  }}
+                  onClick={() => setShowSystemChats(!showSystemChats)}
                   className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${showSystemChats ? "bg-violet" : "bg-surface-high"}`}
                 >
                   <span
@@ -415,40 +380,32 @@ export default function AuthenticatedApp({
           {/* Bottom actions */}
           <div className="relative border-t border-outline-ghost px-2 py-3 space-y-0.5">
             <SidebarNavButton
-              section="overview"
+              path="/overview"
               icon={<OverviewIcon />}
               label="Overview"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              setRequestedConfigTab={setRequestedConfigTab}
+              currentPath={currentPath}
               onNavigate={closeSidebar}
             />
             <SidebarNavButton
-              section="memory"
+              path="/memory"
               icon={<MemoryIcon />}
               label="Memory Graph"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              setRequestedConfigTab={setRequestedConfigTab}
+              currentPath={currentPath}
               onNavigate={closeSidebar}
             />
             <SidebarNavButton
-              section="terminal"
+              path="/terminal"
               icon={<TerminalIcon />}
               label="Sandboxed terminal"
               tooltip="Persistent Alpine Linux sandbox used by agents and workers when calling execute_shell_command. Installed packages and files persist across sessions."
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              setRequestedConfigTab={setRequestedConfigTab}
+              currentPath={currentPath}
               onNavigate={closeSidebar}
             />
             <SidebarNavButton
-              section="config"
+              path="/configuration"
               icon={<ToolIcon />}
               label="Configuration"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              setRequestedConfigTab={setRequestedConfigTab}
+              currentPath={currentPath}
               onNavigate={closeSidebar}
             />
             <button
@@ -484,56 +441,7 @@ export default function AuthenticatedApp({
       </div>
 
       {/* ── Main Content ── */}
-      <div className="md:ml-[332px] flex h-screen flex-col">
-        {activeSection === "chat" ? (
-          <div
-            key="chat"
-            className="flex-1 flex flex-col min-w-0 overflow-hidden animate-in fade-in duration-200"
-          >
-            <ChatShell
-              activeConversationId={activeConversationId}
-              onActiveConversationChange={setActiveConversationId}
-              onConversationsUpdate={handleConversationsUpdate}
-              readOnly={isReadOnly}
-            />
-          </div>
-        ) : activeSection === "overview" ? (
-          <div
-            key="overview"
-            className="flex-1 overflow-y-auto p-8 animate-in fade-in slide-in-from-bottom-3 duration-300"
-          >
-            <OverviewView />
-          </div>
-        ) : activeSection === "terminal" ? (
-          <div
-            key="terminal"
-            className="flex-1 overflow-hidden p-8 flex flex-col animate-in fade-in slide-in-from-bottom-3 duration-300"
-          >
-            <TerminalView />
-          </div>
-        ) : activeSection === "memory" ? (
-          <div
-            key="memory"
-            className="flex-1 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300"
-          >
-            <MemoryGraphTab />
-          </div>
-        ) : activeSection === "config" ? (
-          <div
-            key="config"
-            className="flex-1 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300"
-          >
-            <header className="shrink-0 flex items-center justify-between bg-surface/80 px-8 py-4 backdrop-blur-xl border-b border-outline-ghost">
-              <h2 className="font-display text-3xl font-semibold text-on-surface">
-                {sectionTitles[activeSection]}
-              </h2>
-            </header>
-            <main className="flex-1 overflow-y-auto p-8">
-              <ConfigStudio requestedTab={requestedConfigTab} />
-            </main>
-          </div>
-        ) : null}
-      </div>
+      <div className="md:ml-[332px] flex h-screen flex-col">{children}</div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import {
   endpoints,
   setTokens,
@@ -13,10 +14,8 @@ import {
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-
 import { Spinner } from "@/components/ui/Spinner";
 import { HeartbeatDot } from "@/components/ui/HeartbeatDot";
-import AuthenticatedApp from "@/components/AuthenticatedApp";
 
 interface HealthState {
   name: string;
@@ -33,6 +32,7 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [openCrowVersion, setOpenCrowVersion] = useState("dev");
+  const router = useRouter();
 
   // Init API base URL from server config, then check auth
   useEffect(() => {
@@ -54,10 +54,13 @@ export default function HomePage() {
       .finally(() => setHealthLoading(false));
   }, [authed]);
 
+  // Redirect authenticated users to /chat
+  useEffect(() => {
+    if (authed) router.replace("/chat");
+  }, [authed, router]);
+
   if (authed === null) return null;
-  if (authed) {
-    return <AuthenticatedApp onLogout={() => setAuthed(false)} openCrowVersion={openCrowVersion} />;
-  }
+  if (authed) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

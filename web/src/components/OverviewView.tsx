@@ -57,7 +57,7 @@ function WorkerTerminal({ workerKey, label }: { workerKey: string; label: string
   }, [workerKey]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [entries]);
 
   const dotStatus = !stat || stat.ticks === 0 ? "idle" : stat.lastError ? "warn" : "ok";

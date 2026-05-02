@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { ReactElement } from "react";
+import { useRouter } from "next/router";
 import { endpoints, type UserConfig, type SkillFile, type TaskDTO } from "@/lib/api";
 import { Spinner } from "@/components/ui/Spinner";
 import {
@@ -23,8 +24,12 @@ import {
 } from "@/components/config";
 
 export default function ConfigStudio({ requestedTab }: { requestedTab?: string }) {
+  const router = useRouter();
+  // activeTab sourced from URL query param first, then prop, then defaults to "email"
+  const urlTab = (router.query.tab as string) || undefined;
+  const initialTab = urlTab || requestedTab || "email";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [config, setConfig] = useState<UserConfig | null>(null);
-  const [activeTab, setActiveTab] = useState(requestedTab ?? "email");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -33,9 +38,15 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
   const [tasks, setTasks] = useState<TaskDTO[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
 
+  // Sync from prop (when URL changes above us)
   useEffect(() => {
     if (requestedTab) setActiveTab(requestedTab);
   }, [requestedTab]);
+
+  // Sync from URL query param (when URL changes via shallow replace)
+  useEffect(() => {
+    if (urlTab) setActiveTab(urlTab);
+  }, [urlTab]);
 
   useEffect(() => {
     (async () => {
@@ -257,7 +268,12 @@ export default function ConfigStudio({ requestedTab }: { requestedTab?: string }
           {TABS.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key);
+                router.replace({ pathname: "/configuration", query: { tab: tab.key } }, undefined, {
+                  shallow: true,
+                });
+              }}
               className={`px-4 py-2 text-base font-body rounded-lg whitespace-nowrap transition-all duration-150 hover:cursor-pointer ${
                 activeTab === tab.key
                   ? "bg-violet text-white shadow-md shadow-violet/30"
