@@ -21,10 +21,13 @@ func (s *Server) handleGetHeartbeatConfig(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "unable to load heartbeat config")
 		return
 	}
-	// Attach the user's custom heartbeat prompt from configStore
+	// Attach the user's custom heartbeat prompt and active hours from configStore
 	if s.configStore != nil {
 		if cfg, err := s.configStore.GetUserConfig(userID); err == nil {
 			config.HeartbeatPrompt = cfg.Prompts.HeartbeatPrompt
+			config.ActiveHoursStart = cfg.Heartbeat.ActiveHours.Start
+			config.ActiveHoursEnd = cfg.Heartbeat.ActiveHours.End
+			config.Timezone = cfg.Heartbeat.ActiveHours.TZ
 		}
 	}
 	writeJSON(w, http.StatusOK, config)

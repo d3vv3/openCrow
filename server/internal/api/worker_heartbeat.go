@@ -84,9 +84,80 @@ WHERE enabled = TRUE AND (next_run_at IS NULL OR next_run_at <= NOW());
 	}
 	s.wlog("heartbeat-worker", "[heartbeat-worker] running heartbeat for %d user(s)", len(due))
 	for _, r := range due {
+		// Check active hours window before executing.
+		if s.configStore != nil {
+			if cfg, cfgErr := s.configStore.GetUserConfig(r.userID); cfgErr == nil {
+				ah := cfg.Heartbeat.ActiveHours
+				if ah.Start != "" && ah.End != "" {
+					inWindow, nextWindow, checkErr := heartbeatInActiveWindow(ah.Start, ah.End, ah.TZ)
+					if checkErr != nil {
+						s.wlog("heartbeat-worker", "[heartbeat-worker] active hours parse error for user %s: %v", r.userID, checkErr)
+					} else if !inWindow {
+						s.wlog("heartbeat-worker", "[heartbeat-worker] skipping heartbeat for user %s: outside active hours (%s-%s %s), next window at %s",
+							r.userID, ah.Start, ah.End, ah.TZ, nextWindow.Format(time.RFC3339))
+						// Advance next_run_at to the start of the next active window so the
+						// worker doesn't spin-check every second until then.
+						const upQ = `UPDATE user_heartbeat_configs SET next_run_at = $2, updated_at = NOW() WHERE user_id = $1::uuid`
+						if _, upErr := s.db.Exec(ctx, upQ, r.userID, nextWindow.UTC()); upErr != nil {
+							s.wlog("heartbeat-worker", "[heartbeat-worker] failed to advance next_run_at for user %s: %v", r.userID, upErr)
+						}
+						continue
+					}
+				}
+			}
+		}
 		s.executeHeartbeat(ctx, r.userID, r.intervalSeconds)
 	}
 	return nil
+}
+
+// heartbeatInActiveWindow reports whether now (in the given IANA timezone) falls within
+// [startHHMM, endHHMM). It also returns the next time the window opens, which is used to
+// advance next_run_at so the worker doesn't busy-loop outside the window.
+// startHHMM and endHHMM are "HH:MM" strings (24-hour). tzName is an IANA timezone name;
+// if empty or invalid, UTC is used.
+func heartbeatInActiveWindow(startHHMM, endHHMM, tzName string) (bool, time.Time, error) {
+	loc, err := time.LoadLocation(tzName)
+	if err != nil {
+		loc = time.UTC
+	}
+
+	now := time.Now().In(loc)
+
+	parseHHMM := func(s string) (int, int, error) {
+		var h, m int
+		if _, err := fmt.Sscanf(s, "%d:%d", &h, &m); err != nil {
+			return 0, 0, fmt.Errorf("invalid HH:MM %q: %w", s, err)
+		}
+		return h, m, nil
+	}
+
+	sh, sm, err := parseHHMM(startHHMM)
+	if err != nil {
+		return false, time.Time{}, err
+	}
+	eh, em, err := parseHHMM(endHHMM)
+	if err != nil {
+		return false, time.Time{}, err
+	}
+
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), sh, sm, 0, 0, loc)
+	todayEnd := time.Date(now.Year(), now.Month(), now.Day(), eh, em, 0, 0, loc)
+
+	inWindow := !now.Before(todayStart) && now.Before(todayEnd)
+
+	var nextWindow time.Time
+	if inWindow {
+		nextWindow = todayStart // already in window; caller won't use this
+	} else if now.Before(todayStart) {
+		// Before today's window opens
+		nextWindow = todayStart
+	} else {
+		// Past today's window -- next window is tomorrow
+		nextWindow = todayStart.AddDate(0, 0, 1)
+	}
+
+	return inWindow, nextWindow, nil
 }
 
 func (s *Server) executeHeartbeat(ctx context.Context, userID string, intervalSeconds int) {

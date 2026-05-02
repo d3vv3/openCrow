@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/icons";
 import { clearTokens, endpoints, getOpenCrowVersion } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
+import ChatShell from "@/components/ChatShell";
 
 // ─── Helpers ───
 
@@ -102,6 +103,8 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   const setConversations = useAppStore((s) => s.setConversations);
   const showSystemChats = useAppStore((s) => s.showSystemChats);
   const setShowSystemChats = useAppStore((s) => s.setShowSystemChats);
+  const activeChatId = useAppStore((s) => s.activeChatId);
+  const setActiveChatId = useAppStore((s) => s.setActiveChatId);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const version = getOpenCrowVersion();
@@ -441,7 +444,33 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
       </div>
 
       {/* ── Main Content ── */}
-      <div className="md:ml-[332px] flex h-screen flex-col">{children}</div>
+      <div className="md:ml-[332px] flex h-screen flex-col">
+        {/* Persistent ChatShell -- stays mounted across /chat <-> /chat/[id] */}
+        {currentPath.startsWith("/chat") && (
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <ChatShell
+              activeConversationId={
+                // Prefer URL-derived id (handles direct navigation / page refresh)
+                // and fall back to store for in-app shallow navigation.
+                currentPath.startsWith("/chat/")
+                  ? ((router.query.id as string) ?? activeChatId)
+                  : activeChatId
+              }
+              onActiveConversationChange={(id) => {
+                setActiveChatId(id);
+                if (id) {
+                  router.push(`/chat/${id}`, undefined, { shallow: true });
+                } else {
+                  router.push("/chat", undefined, { shallow: true });
+                }
+              }}
+              onConversationsUpdate={(list) => setConversations(list)}
+              readOnly={!!conversations.find((c) => c.id === activeChatId)?.channel}
+            />
+          </div>
+        )}
+        {!currentPath.startsWith("/chat") && children}
+      </div>
     </div>
   );
 }

@@ -1,37 +1,21 @@
 // ─── openCrow Chat/[id] Page ───
-// Chat page for a specific conversation. Reads id from the URL.
+// Thin shell: sets activeChatId in the store so the persistent ChatShell
+// (mounted in AuthenticatedLayout) loads the correct conversation.
 
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/router";
-import ChatShell from "@/components/ChatShell";
 import { useAppStore } from "@/lib/store";
 
 export default function ChatWithConversationPage() {
   const router = useRouter();
   const { id } = router.query as { id?: string };
+  const setActiveChatId = useAppStore((s) => s.setActiveChatId);
 
-  const conversations = useAppStore((s) => s.conversations);
-  const setConversations = useAppStore((s) => s.setConversations);
+  useEffect(() => {
+    if (id) setActiveChatId(id);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const conversationId = id ?? null;
-  const activeConversation = conversations.find((c) => c.id === conversationId);
-  const isReadOnly = !!activeConversation?.channel;
-
-  return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden animate-in fade-in duration-200">
-      <ChatShell
-        activeConversationId={conversationId}
-        onActiveConversationChange={(newId) => {
-          if (newId) {
-            router.push(`/chat/${newId}`, undefined, { shallow: false });
-          } else {
-            router.push("/chat");
-          }
-        }}
-        onConversationsUpdate={(list) => setConversations(list)}
-        readOnly={isReadOnly}
-      />
-    </div>
-  );
+  return null;
 }

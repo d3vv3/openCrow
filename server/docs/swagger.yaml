@@ -342,6 +342,10 @@ definitions:
     type: object
   api.HeartbeatConfigDTO:
     properties:
+      activeHoursEnd:
+        type: string
+      activeHoursStart:
+        type: string
       enabled:
         type: boolean
       heartbeatPrompt:
@@ -349,6 +353,8 @@ definitions:
       intervalSeconds:
         type: integer
       nextRunAt:
+        type: string
+      timezone:
         type: string
       updatedAt:
         type: string

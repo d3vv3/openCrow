@@ -206,12 +206,15 @@ type RunServerCommandResponse struct {
 }
 
 type HeartbeatConfigDTO struct {
-	UserID          string `json:"userId"`
-	Enabled         bool   `json:"enabled"`
-	IntervalSeconds int    `json:"intervalSeconds"`
-	NextRunAt       string `json:"nextRunAt,omitempty"`
-	UpdatedAt       string `json:"updatedAt"`
-	HeartbeatPrompt string `json:"heartbeatPrompt,omitempty"`
+	UserID           string `json:"userId"`
+	Enabled          bool   `json:"enabled"`
+	IntervalSeconds  int    `json:"intervalSeconds"`
+	NextRunAt        string `json:"nextRunAt,omitempty"`
+	UpdatedAt        string `json:"updatedAt"`
+	HeartbeatPrompt  string `json:"heartbeatPrompt,omitempty"`
+	ActiveHoursStart string `json:"activeHoursStart,omitempty"`
+	ActiveHoursEnd   string `json:"activeHoursEnd,omitempty"`
+	Timezone         string `json:"timezone,omitempty"`
 }
 
 type UpdateHeartbeatConfigRequest struct {

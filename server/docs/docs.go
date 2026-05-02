@@ -4035,6 +4035,12 @@ const docTemplate = `{
         "api.HeartbeatConfigDTO": {
             "type": "object",
             "properties": {
+                "activeHoursEnd": {
+                    "type": "string"
+                },
+                "activeHoursStart": {
+                    "type": "string"
+                },
                 "enabled": {
                     "type": "boolean"
                 },
@@ -4045,6 +4051,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "nextRunAt": {
+                    "type": "string"
+                },
+                "timezone": {
                     "type": "string"
                 },
                 "updatedAt": {
