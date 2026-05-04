@@ -1,7 +1,8 @@
-// chat/MarkdownMessage.tsx — Markdown renderer with custom styling for chat messages.
+// chat/MarkdownMessage.tsx -- Markdown renderer with custom styling for chat messages.
 "use client";
 
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 function safeMarkdownUrlTransform(url: string) {
   if (/^data:image\//i.test(url)) return url;
@@ -39,8 +40,23 @@ export function MarkdownMessage({
 }) {
   return (
     <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
       urlTransform={safeMarkdownUrlTransform}
       components={{
+        table: ({ children }) => (
+          <div className="overflow-x-auto my-2">
+            <table className="min-w-full text-xs border-collapse">{children}</table>
+          </div>
+        ),
+        thead: ({ children }) => <thead className="border-b border-white/20">{children}</thead>,
+        tbody: ({ children }) => <tbody>{children}</tbody>,
+        tr: ({ children }) => (
+          <tr className="border-b border-white/10 last:border-0">{children}</tr>
+        ),
+        th: ({ children }) => (
+          <th className="px-3 py-1.5 text-left font-semibold opacity-90">{children}</th>
+        ),
+        td: ({ children }) => <td className="px-3 py-1.5 opacity-80">{children}</td>,
         p: ({ children }) => (
           <p className={compact ? "mb-1.5 last:mb-0" : "mb-2 last:mb-0"}>{children}</p>
         ),

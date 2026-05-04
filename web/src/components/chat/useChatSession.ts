@@ -41,14 +41,13 @@ export function useChatSession({
   const [sending, setSending] = useState(false);
   const [lastUsage, setLastUsage] = useState<TokenUsage | null>(null);
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null);
-  const [loadingConvs, setLoadingConvs] = useState(true);
+  const [loadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<PickedAttachmentFile[]>([]);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
-  const setConversationsLoading = useAppStore((s) => s.setConversationsLoading);
   const setChatBusy = useAppStore((s) => s.setChatBusy);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -386,6 +385,7 @@ export function useChatSession({
     onConversationsUpdate,
     selectedProvider,
     sending,
+    setChatBusy,
   ]);
 
   const handleFilesPicked = useCallback((e: ChangeEvent<HTMLInputElement>) => {
