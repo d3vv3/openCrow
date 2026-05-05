@@ -403,6 +403,8 @@ func (s *Server) registerSkillRoutes() {
 
 func (s *Server) registerMCPRoutes() {
 	s.mux.Handle("POST /v1/mcp/test", s.requireAccessToken(http.HandlerFunc(s.handleTestMCPServer)))
+	// Built-in configuration MCP server -- always enabled, cannot be disabled.
+	s.mux.Handle("POST /v1/mcp/config", s.requireAccessToken(http.HandlerFunc(s.handleConfigMCPServer)))
 }
 
 func (s *Server) registerDAVRoutes() {

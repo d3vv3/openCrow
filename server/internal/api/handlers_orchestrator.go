@@ -892,6 +892,26 @@ func (s *Server) buildEnabledToolSpecs(ctx context.Context, userID string, cfg *
 		seen["send_push_notification"] = struct{}{}
 	}
 
+	// Inject built-in config MCP tools directly so the LLM can call them without
+	// an extra MCP round-trip.  They are dispatched via handleConfigMCPCall.
+	for _, def := range configMCPToolDefs {
+		name, _ := def["name"].(string)
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		desc, _ := def["description"].(string)
+		schema, _ := def["inputSchema"].(map[string]any)
+		toolSpecs = append(toolSpecs, orchestrator.ToolSpec{
+			Name:        name,
+			Description: desc,
+			Parameters:  schema,
+		})
+		seen[name] = struct{}{}
+	}
+
 	for _, def := range cfg.Tools.Definitions {
 		enabled := cfg.Tools.Enabled[def.ID]
 		if !enabled {

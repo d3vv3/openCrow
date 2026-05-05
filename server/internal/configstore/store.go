@@ -229,6 +229,15 @@ func normalize(cfg UserConfig) UserConfig {
 		"reply_email": true,
 		// list_dav_integrations and test_dav_connection merged into inspect_dav
 		"list_dav_integrations": true, "test_dav_connection": true,
+		// moved to built-in config MCP server (POST /v1/mcp/config)
+		"setup_email": true, "remove_email": true,
+		"setup_telegram_bot": true,
+		"setup_dav": true, "inspect_dav": true,
+		"add_mcp_server": true, "remove_mcp_server": true, "list_mcp_servers": true,
+		"create_device": true, "delete_device": true, "edit_device": true, "edit_device_task": true,
+		"create_skill": true, "delete_skill": true, "install_skills": true,
+		"schedule_task": true, "cancel_task": true,
+		"configure_heartbeat": true, "trigger_heartbeat": true,
 	}
 	filtered := cfg.Tools.Definitions[:0]
 	for _, d := range cfg.Tools.Definitions {
