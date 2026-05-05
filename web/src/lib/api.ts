@@ -842,7 +842,7 @@ export const endpoints = {
   // Device Pairing
   deleteDevice: (deviceId: string) => api(`/v1/devices/${deviceId}`, { method: "DELETE" }),
   deleteSession: (sessionId: string) => api(`/v1/sessions/${sessionId}`, { method: "DELETE" }),
-  listSessions: () => api<{ sessions: DeviceSession[] }>("/v1/sessions"),
+  listSessions: () => api<{ sessions: DeviceSession[]; currentSessionId: string }>("/v1/sessions"),
   createDeviceTokens: (deviceLabel: string) =>
     api<{ tokens: { accessToken: string; refreshToken: string } }>("/v1/auth/device-tokens", {
       method: "POST",

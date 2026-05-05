@@ -153,7 +153,11 @@ func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "unable to load sessions")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"sessions": sessions})
+	currentSessionID := sessionIDFromContext(r.Context())
+	writeJSON(w, http.StatusOK, map[string]any{
+		"sessions":         sessions,
+		"currentSessionId": currentSessionID,
+	})
 }
 
 // @Summary Delete a session by ID

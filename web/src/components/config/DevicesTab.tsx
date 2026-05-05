@@ -29,6 +29,7 @@ export function DevicesTab({
 }) {
   const [registrations, setRegistrations] = useState<Record<string, DeviceRegistration>>({});
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState(() => getApiBase());
   const [isAddingDevice, setIsAddingDevice] = useState(false);
   const [removingOrphan, setRemovingOrphan] = useState<string | null>(null);
@@ -41,8 +42,11 @@ export function DevicesTab({
     (r) => !configuredIds.has(r.deviceId),
   );
   // Orphan sessions: session exists but has no device registration (cancelled pairings etc.)
+  // Exclude the current browser session and any paired device sessions.
   const registeredDeviceIds = new Set(Object.keys(registrations));
-  const orphanSessions = sessions.filter((s) => !registeredDeviceIds.has(s.id));
+  const orphanSessions = sessions.filter(
+    (s) => !registeredDeviceIds.has(s.id) && s.id !== currentSessionId,
+  );
 
   const loadRegistrations = useCallback(() => {
     endpoints
@@ -55,7 +59,10 @@ export function DevicesTab({
       .catch(() => {});
     endpoints
       .listSessions()
-      .then((res) => setSessions(res.sessions ?? []))
+      .then((res) => {
+        setSessions(res.sessions ?? []);
+        if (res.currentSessionId) setCurrentSessionId(res.currentSessionId);
+      })
       .catch(() => {});
   }, []);
 

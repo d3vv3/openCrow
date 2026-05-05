@@ -507,7 +507,15 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
                 }
               }}
               onConversationsUpdate={(list) => setConversations(list)}
-              readOnly={!!conversations.find((c) => c.id === activeChatId)?.channel}
+              readOnly={
+                !!conversations.find(
+                  (c) =>
+                    c.id ===
+                    (currentPath.startsWith("/chat/")
+                      ? router.asPath.split("?")[0].replace(/^\/chat\//, "") || activeChatId
+                      : activeChatId),
+                )?.channel
+              }
             />
           </div>
         )}

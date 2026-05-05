@@ -118,6 +118,7 @@ export function AddDeviceModal({
     try {
       const res = await endpoints.createDeviceTokens(trimLabel);
       // Extract session ID from the access token payload (it's the `sid` claim).
+      // The session UUID is used as the device ID so that device_sessions.id == device_registrations.device_id.
       let sid: string | null = null;
       try {
         const payload = JSON.parse(atob(res.tokens.accessToken.split(".")[1]));
@@ -125,7 +126,7 @@ export function AddDeviceModal({
       } catch {
         // ignore -- session cleanup on cancel will be best-effort
       }
-      const newDeviceId = "dev_" + Math.random().toString(36).substring(2, 9);
+      const newDeviceId = sid ?? "dev_" + Math.random().toString(36).substring(2, 9);
       setDeviceId(newDeviceId);
       setSessionId(sid);
       setQrPayload(

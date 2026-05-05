@@ -33,7 +33,6 @@ export default function ChatShell({
     sending,
     lastUsage,
     streamingMsgId,
-    loadingConvs,
     loadingMsgs,
     attachedFiles,
     regeneratingId,
@@ -84,9 +83,6 @@ export default function ChatShell({
                 <p className="text-on-surface-variant text-sm font-mono">
                   Start a new conversation from the prompt below.
                 </p>
-                {loadingConvs && (
-                  <p className="text-on-surface-variant text-xs">Loading previous chats...</p>
-                )}
               </div>
             </div>
           ) : loadingMsgs ? (

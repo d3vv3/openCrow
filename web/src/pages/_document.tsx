@@ -7,6 +7,7 @@ export default function Document() {
   return (
     <Html lang="en" className="dark" suppressHydrationWarning>
       <Head>
+        <title>openCrow</title>
         <meta name="description" content="Self-hostable multi-device AI assistant" />
         <link rel="icon" href="/crow.svg" type="image/svg+xml" />
       </Head>
